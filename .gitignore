@@ -1,0 +1,7 @@
+.vscode/
+bin/
+obj/
+test-cases/
+trace/
+tracer/obj-intel64/
+tracer/quick_make.sh
