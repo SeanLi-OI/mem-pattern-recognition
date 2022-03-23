@@ -8,7 +8,7 @@ EXE := $(BIN_DIR)/mpr
 SRC := $(wildcard $(SRC_DIR)/*.cpp)
 OBJ := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-CPPFLAGS := -Iinclude -std=c++17 -O3
+CPPFLAGS := -Iinclude -std=c++17 -O3 #-O0 -g
 CFLAGS   :=
 LDFLAGS  :=
 LDLIBS   :=

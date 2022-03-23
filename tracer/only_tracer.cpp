@@ -43,11 +43,8 @@ typedef struct trace_instr_format {
 
 UINT64 instrCount = 0;
 
-FILE *out;
-
 PIN_LOCK globalLock;
 
-bool output_file_closed = false;
 bool tracing_on = false;
 
 trace_instr_format_t curr_instr;
@@ -55,17 +52,16 @@ trace_instr_format_t curr_instr;
 /* ===================================================================== */
 // Command line switches
 /* ===================================================================== */
-KNOB<std::string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool", "o",
-                                 "mpr.trace",
-                                 "specify file name for MPR tracer output");
+KNOB<std::string> KnobOutputFile(
+    KNOB_MODE_WRITEONCE, "pintool", "o", "mpr.trace",
+    "specify file name for MPR tracer output");
 
 KNOB<UINT64> KnobSkipInstructions(
     KNOB_MODE_WRITEONCE, "pintool", "s", "0",
     "How many instructions to skip before tracing begins");
 
 KNOB<UINT64> KnobTraceInstructions(KNOB_MODE_WRITEONCE, "pintool", "t",
-                                   "1000000000",
-                                   "How many instructions to trace");
+                                   "1000000000", "How many instructions to trace");
 
 /* ===================================================================== */
 // Utilities
@@ -136,15 +132,9 @@ void EndInstruction() {
     if (instrCount <=
         (KnobTraceInstructions.Value() + KnobSkipInstructions.Value())) {
       // keep tracing
-      fwrite(&curr_instr, sizeof(trace_instr_format_t), 1, out);
+      // fwrite(&curr_instr, sizeof(trace_instr_format_t), 1, out);
     } else {
       tracing_on = false;
-      // close down the file, we're done tracing
-      if (!output_file_closed) {
-        fclose(out);
-        output_file_closed = true;
-      }
-
       exit(0);
     }
   }
@@ -159,10 +149,11 @@ void BranchOrNot(UINT32 taken) {
   }
 }
 
-void RegRead(UINT32 i, UINT32 index, const CONTEXT *ctxt) {
+void RegRead(UINT32 i, UINT32 index) {
   if (!tracing_on) return;
 
   REG r = (REG)i;
+
   /*
      if(r == 26)
      {
@@ -181,9 +172,6 @@ void RegRead(UINT32 i, UINT32 index, const CONTEXT *ctxt) {
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
     if (curr_instr.source_registers[i] == ((unsigned char)r)) {
       already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
       break;
     }
   }
@@ -197,7 +185,7 @@ void RegRead(UINT32 i, UINT32 index, const CONTEXT *ctxt) {
   }
 }
 
-void RegWrite(REG i, UINT32 index, const CONTEXT *ctxt) {
+void RegWrite(REG i, UINT32 index) {
   if (!tracing_on) return;
 
   REG r = (REG)i;
@@ -219,9 +207,6 @@ void RegWrite(REG i, UINT32 index, const CONTEXT *ctxt) {
   for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
     if (curr_instr.destination_registers[i] == ((unsigned char)r)) {
       already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
       break;
     }
   }
@@ -336,7 +321,7 @@ VOID Instruction(INS ins, VOID *v) {
     UINT32 regNum = INS_RegR(ins, i);
 
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)RegRead, IARG_UINT32, regNum,
-                   IARG_UINT32, i, IARG_CONST_CONTEXT, IARG_END);
+                   IARG_UINT32, i, IARG_END);
   }
 
   // instrument register writes
@@ -345,7 +330,7 @@ VOID Instruction(INS ins, VOID *v) {
     UINT32 regNum = INS_RegW(ins, i);
 
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)RegWrite, IARG_UINT32, regNum,
-                   IARG_UINT32, i, IARG_CONST_CONTEXT, IARG_END);
+                   IARG_UINT32, i, IARG_END);
   }
 
   // instrument memory reads and writes
@@ -381,11 +366,6 @@ VOID Instruction(INS ins, VOID *v) {
  *                              PIN_AddFiniFunction function call
  */
 VOID Fini(INT32 code, VOID *v) {
-  // close the file if it hasn't already been closed
-  if (!output_file_closed) {
-    fclose(out);
-    output_file_closed = true;
-  }
 }
 
 /*!
@@ -400,26 +380,11 @@ int main(int argc, char *argv[]) {
   // Initialize PIN library. Print help message if -h(elp) is specified
   // in the command line or the command line is invalid
   if (PIN_Init(argc, argv)) return Usage();
-
-  const char *fileName = argv[argc - 1];
-
-  out = fopen(fileName, "ab");
-  if (!out) {
-    std::cout << "Couldn't open output trace file. Exiting." << std::endl;
-    exit(1);
-  }
-
   // Register function to be called to instrument instructions
   INS_AddInstrumentFunction(Instruction, 0);
 
   // Register function to be called when the application exits
   PIN_AddFiniFunction(Fini, 0);
-
-  std::cerr << "===============================================" << std::endl;
-  std::cerr << "This application is instrumented by the MPR Trace Generator"
-            << std::endl;
-  std::cerr << "Trace saved in " << fileName << std::endl;
-  std::cerr << "===============================================" << std::endl;
 
   // Start the program, never returns
   PIN_StartProgram();

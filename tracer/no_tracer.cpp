@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <fstream>
 #include <iostream>
@@ -50,6 +51,8 @@ PIN_LOCK globalLock;
 bool output_file_closed = false;
 bool tracing_on = false;
 
+struct timeval time1, time2;
+
 trace_instr_format_t curr_instr;
 
 /* ===================================================================== */
@@ -64,7 +67,7 @@ KNOB<UINT64> KnobSkipInstructions(
     "How many instructions to skip before tracing begins");
 
 KNOB<UINT64> KnobTraceInstructions(KNOB_MODE_WRITEONCE, "pintool", "t",
-                                   "1000000000",
+                                   "10000000000",
                                    "How many instructions to trace");
 
 /* ===================================================================== */
@@ -105,24 +108,6 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   }
 
   if (!tracing_on) return;
-
-  // reset the current instruction
-  curr_instr.ip = (unsigned long long int)ip;
-
-  curr_instr.is_branch = 0;
-  curr_instr.branch_taken = 0;
-
-  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-    curr_instr.destination_registers[i] = 0;
-    curr_instr.destination_memory[i] = 0;
-    curr_instr.destination_memory_value[i] = 0;
-  }
-
-  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-    curr_instr.source_registers[i] = 0;
-    curr_instr.source_memory[i] = 0;
-    curr_instr.source_memory_value[i] = 0;
-  }
 }
 
 void EndInstruction() {
@@ -135,183 +120,32 @@ void EndInstruction() {
 
     if (instrCount <=
         (KnobTraceInstructions.Value() + KnobSkipInstructions.Value())) {
-      // keep tracing
-      fwrite(&curr_instr, sizeof(trace_instr_format_t), 1, out);
     } else {
       tracing_on = false;
-      // close down the file, we're done tracing
-      if (!output_file_closed) {
-        fclose(out);
-        output_file_closed = true;
-      }
-
+      gettimeofday(&time2, NULL);
+      printf("took %lu us\n", (time2.tv_sec - time1.tv_sec) * 1000000 +
+                                  time2.tv_usec - time1.tv_usec);
       exit(0);
     }
   }
 }
 
-void BranchOrNot(UINT32 taken) {
-  // printf("[%d] ", taken);
+void BranchOrNot(UINT32 taken) {}
 
-  curr_instr.is_branch = 1;
-  if (taken != 0) {
-    curr_instr.branch_taken = 1;
-  }
+void RegRead(UINT32 i, UINT32 index) {
+  if (!tracing_on) return;
 }
 
-void RegRead(UINT32 i, UINT32 index, const CONTEXT *ctxt) {
+void RegWrite(REG i, UINT32 index) {
   if (!tracing_on) return;
-
-  REG r = (REG)i;
-  /*
-     if(r == 26)
-     {
-  // 26 is the IP, which is read and written by branches
-  return;
-  }
-  */
-
-  // cout << r << " " << REG_StringShort((REG)r) << " " ;
-  // cout << REG_StringShort((REG)r) << " " ;
-
-  // printf("%d ", (int)r);
-
-  // check to see if this register is already in the list
-  int already_found = 0;
-  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-    if (curr_instr.source_registers[i] == ((unsigned char)r)) {
-      already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
-      break;
-    }
-  }
-  if (already_found == 0) {
-    for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-      if (curr_instr.source_registers[i] == 0) {
-        curr_instr.source_registers[i] = (unsigned char)r;
-        break;
-      }
-    }
-  }
-}
-
-void RegWrite(REG i, UINT32 index, const CONTEXT *ctxt) {
-  if (!tracing_on) return;
-
-  REG r = (REG)i;
-
-  /*
-     if(r == 26)
-     {
-  // 26 is the IP, which is read and written by branches
-  return;
-  }
-  */
-
-  // cout << "<" << r << " " << REG_StringShort((REG)r) << "> ";
-  // cout << "<" << REG_StringShort((REG)r) << "> ";
-
-  // printf("<%d> ", (int)r);
-
-  int already_found = 0;
-  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-    if (curr_instr.destination_registers[i] == ((unsigned char)r)) {
-      already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
-      break;
-    }
-  }
-  if (already_found == 0) {
-    for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-      if (curr_instr.destination_registers[i] == 0) {
-        curr_instr.destination_registers[i] = (unsigned char)r;
-        break;
-      }
-    }
-  }
-  /*
-     if(index==0)
-     {
-     curr_instr.destination_register = (unsigned long long int)r;
-     }
-     */
 }
 
 void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
   if (!tracing_on) return;
-
-  // printf("0x%llx,%u ", (unsigned long long int)addr, read_size);
-
-  // check to see if this memory read location is already in the list
-  int already_found = 0;
-  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-    if (curr_instr.source_memory[i] == ((unsigned long long int)addr)) {
-      already_found = 1;
-      {
-        PIN_GetLock(&globalLock, 1);
-        ADDRINT *addr_ptr = (ADDRINT *)addr;
-        ADDRINT value;
-        if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
-          PIN_SafeCopy(&value, addr_ptr, read_size);
-          curr_instr.source_memory_value[i] = (unsigned long long int)value;
-        }
-        PIN_ReleaseLock(&globalLock);
-      }
-      break;
-    }
-  }
-  if (already_found == 0) {
-    for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-      if (curr_instr.source_memory[i] == 0) {
-        curr_instr.source_memory[i] = (unsigned long long int)addr;
-        break;
-      }
-    }
-  }
 }
 
 void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
   if (!tracing_on) return;
-
-  // printf("(0x%llx) ", (unsigned long long int) addr);
-
-  // check to see if this memory write location is already in the list
-  int already_found = 0;
-  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-    if (curr_instr.destination_memory[i] == ((unsigned long long int)addr)) {
-      already_found = 1;
-      {
-        PIN_GetLock(&globalLock, 1);
-        ADDRINT *addr_ptr = (ADDRINT *)addr;
-        ADDRINT value;
-        if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
-          PIN_SafeCopy(&value, addr_ptr, write_size);
-          curr_instr.destination_memory_value[i] =
-              (unsigned long long int)value;
-        }
-        PIN_ReleaseLock(&globalLock);
-      }
-      break;
-    }
-  }
-  if (already_found == 0) {
-    for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-      if (curr_instr.destination_memory[i] == 0) {
-        curr_instr.destination_memory[i] = (unsigned long long int)addr;
-        break;
-      }
-    }
-  }
-  /*
-     if(index==0)
-     {
-     curr_instr.destination_memory = (long long int)addr;
-     }
-     */
 }
 
 /* ===================================================================== */
@@ -336,7 +170,7 @@ VOID Instruction(INS ins, VOID *v) {
     UINT32 regNum = INS_RegR(ins, i);
 
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)RegRead, IARG_UINT32, regNum,
-                   IARG_UINT32, i, IARG_CONST_CONTEXT, IARG_END);
+                   IARG_UINT32, i, IARG_END);
   }
 
   // instrument register writes
@@ -345,7 +179,7 @@ VOID Instruction(INS ins, VOID *v) {
     UINT32 regNum = INS_RegW(ins, i);
 
     INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)RegWrite, IARG_UINT32, regNum,
-                   IARG_UINT32, i, IARG_CONST_CONTEXT, IARG_END);
+                   IARG_UINT32, i, IARG_END);
   }
 
   // instrument memory reads and writes
@@ -382,12 +216,19 @@ VOID Instruction(INS ins, VOID *v) {
  */
 VOID Fini(INT32 code, VOID *v) {
   // close the file if it hasn't already been closed
-  if (!output_file_closed) {
-    fclose(out);
-    output_file_closed = true;
-  }
 }
 
+timespec diff(timespec start, timespec end) {
+  timespec temp;
+  if ((end.tv_nsec - start.tv_nsec) < 0) {
+    temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+    temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+  } else {
+    temp.tv_sec = end.tv_sec - start.tv_sec;
+    temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+  }
+  return temp;
+}
 /*!
  * The main procedure of the tool.
  * This function is called when the application image is loaded but not yet
@@ -400,14 +241,8 @@ int main(int argc, char *argv[]) {
   // Initialize PIN library. Print help message if -h(elp) is specified
   // in the command line or the command line is invalid
   if (PIN_Init(argc, argv)) return Usage();
-
-  const char *fileName = argv[argc - 1];
-
-  out = fopen(fileName, "ab");
-  if (!out) {
-    std::cout << "Couldn't open output trace file. Exiting." << std::endl;
-    exit(1);
-  }
+  gettimeofday(&time1, NULL);
+  //   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time1);
 
   // Register function to be called to instrument instructions
   INS_AddInstrumentFunction(Instruction, 0);
@@ -415,14 +250,11 @@ int main(int argc, char *argv[]) {
   // Register function to be called when the application exits
   PIN_AddFiniFunction(Fini, 0);
 
-  std::cerr << "===============================================" << std::endl;
-  std::cerr << "This application is instrumented by the MPR Trace Generator"
-            << std::endl;
-  std::cerr << "Trace saved in " << fileName << std::endl;
-  std::cerr << "===============================================" << std::endl;
-
   // Start the program, never returns
   PIN_StartProgram();
+  gettimeofday(&time2, NULL);
+  printf("took %lu us\n", (time2.tv_sec - time1.tv_sec) * 1000000 +
+                              time2.tv_usec - time1.tv_usec);
 
   return 0;
 }
