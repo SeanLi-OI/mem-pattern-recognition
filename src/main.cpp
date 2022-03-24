@@ -1,13 +1,14 @@
 #include <algorithm>
 #include <functional>
 #include <queue>
+#include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 #include "tracereader.h"
 
-#define DEBUG_PC
-#define DEBUG_ADDR
+#define DEBUG_VALUE
 // #define DEBUG_HISTORY
 #define ENABLE_TIMER
 
@@ -15,14 +16,26 @@
 #include <chrono>
 #endif
 
-const int PATTERN_NUM = 7;
-const std::string PATTERN_NAME[] = {"fresh\t",   "static\t", "stride\t",
-                                    "pointer\t", "indirect", "chain\t",
-                                    "other\t"};
-// const int pattern_mapper[] = {0, 3, 4, 5, 1, 2, 6};
-const int pattern_mapper[] = {0, 1, 2, 3, 4, 5, 6};
+const int PATTERN_NUM = 8;
+const std::string PATTERN_NAME[] = {"fresh\t",  "static\t", "stride\t",
+                                    "pointerA", "pointerB", "indirect",
+                                    "chain\t",  "other\t"};
+enum PATTERN : uint16_t {
+  FRESH,
+  STATIC,
+  STRIDE,
+  POINTER_A,
+  POINTER_B,
+  INDIRECT,
+  CHAIN,
+  OTHER
+};
+template <typename E>
+constexpr auto to_underlying(E e) noexcept {
+  return static_cast<std::underlying_type_t<E>>(e);
+}
 
-const uint32_t INTERVAL = 512;
+const uint32_t INTERVAL = 32;
 
 class TraceList {
   struct TraceNode {
@@ -30,25 +43,43 @@ class TraceList {
     uint64_t pc;
     uint64_t addr;
     uint64_t value;
-    bool isRead;
-    uint16_t pattern;
-    uint64_t last_addr;
-    uint64_t base_addr;
+    bool isWrite;
     TraceNode() {}
     TraceNode(uint64_t _p, uint64_t _a, uint64_t _v, bool _i, uint64_t _id)
-        : pc(_p), addr(_a), value(_v), isRead(_i), id(_id) {
-      pattern = PATTERN_NUM - 1;
-      last_addr = 0;
-      base_addr = addr;
-    }
+        : pc(_p), addr(_a), value(_v), isWrite(_i), id(_id) {}
   };
 
-  std::unordered_map<uint64_t, std::deque<TraceNode>> pc2trace;
+  struct PCmeta {
+    // INDIRECT
+    std::unordered_map<uint64_t, std::pair<uint64_t, uint64_t>>
+        pc_value_candidate;
+
+    // CHAIN
+    std::set<uint64_t> offset_candidate;
+    uint64_t offset;
+
+    // POINTER_A
+    std::set<uint64_t> lastpc_candidate;
+    uint64_t lastpc;
+
+    // STATIC & STRIDE
+    uint64_t lastaddr;
+
+    // common
+    PATTERN pattern;
+    uint64_t count;
+    bool confirm;
+    PCmeta() {
+      offset = lastaddr = lastpc = confirm = 0;
+      pattern = PATTERN::OTHER;
+      count = 1;
+    }
+  };
   std::unordered_map<uint64_t, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
 
   uint64_t pattern_count[PATTERN_NUM];
-  std::unordered_map<uint64_t, uint16_t> pc2pattern;
+  std::unordered_map<uint64_t, PCmeta> pc2meta;
 #ifdef ENABLE_TIMER
   uint64_t total_time;
 #endif
@@ -60,6 +91,96 @@ class TraceList {
   }
   void add_next(std::deque<TraceNode> &L, TraceNode tn) { L.push_back(tn); }
 
+  bool check_static_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &pc,
+      uint64_t &addr) {
+    if (pc2meta[pc].lastaddr == addr) return true;
+    return false;
+  }
+  bool check_stride_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &pc,
+      uint64_t &addr) {
+    auto offset = abs(it_meta->second.lastaddr - addr);
+    if (offset <= 16) std::cerr << offset << std::endl;
+    if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return true;
+    return false;
+  };
+  bool check_pointerA_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta,
+      std::unordered_map<uint64_t, std::deque<TraceNode>>::iterator &it_val,
+      uint64_t &addr) {
+    if (it_meta->second.lastpc_candidate.empty()) {
+      for (auto it = it_val->second.rbegin(); it != it_val->second.rend();
+           it++) {
+        it_meta->second.lastpc_candidate.insert(it->pc);
+      }
+    } else {
+      for (auto it = it_val->second.rbegin(); it != it_val->second.rend();
+           it++) {
+        if (it_meta->second.lastpc_candidate.find(it->pc) !=
+            it_meta->second.lastpc_candidate.end()) {
+          it_meta->second.lastpc_candidate.clear();
+          it_meta->second.lastpc = it->pc;
+          it_meta->second.confirm = true;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  bool check_pointerB_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &addr) {
+    if (pc2meta[it_meta->second.lastpc].pattern == PATTERN::STRIDE) return true;
+    return false;
+  }
+  bool check_indirect_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &addr) {
+    if (it_meta->second.offset_candidate.empty()) {
+      for (auto trace : traceHistory) {
+        if (pc2meta[trace.pc].pattern == PATTERN::STRIDE) {
+          it_meta->second.pc_value_candidate[trace.pc] =
+              std::make_pair(trace.value, addr);
+        }
+      }
+    } else {
+      for (auto trace : traceHistory) {
+        if (pc2meta[trace.pc].pattern == PATTERN::STRIDE) {
+          auto it = it_meta->second.pc_value_candidate.find(trace.pc);
+          if (it != it_meta->second.pc_value_candidate.end() &&
+              addr != it->second.second && trace.value != it->second.first &&
+              (addr - it->second.second) % (trace.value - it->second.first) ==
+                  0) {
+            it_meta->second.pc_value_candidate.clear();
+            it_meta->second.confirm = true;
+            return true;
+          }
+        }
+      }
+    }
+  }
+  bool check_chain_pattern(
+      std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &addr) {
+    if (it_meta->second.offset_candidate.empty()) {
+      for (auto trace : traceHistory) {
+        if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A) {
+          it_meta->second.offset_candidate.insert(abs(trace.value - addr));
+        }
+      }
+    } else {
+      for (auto trace : traceHistory) {
+        if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A &&
+            it_meta->second.offset_candidate.find(abs(trace.value - addr)) !=
+                it_meta->second.offset_candidate.end()) {
+          it_meta->second.offset_candidate.clear();
+          it_meta->second.offset = abs(trace.value - addr);
+          it_meta->second.confirm = true;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
  public:
   TraceList() {
     for (int i = 0; i < PATTERN_NUM; i++) pattern_count[i] = 0;
@@ -67,19 +188,9 @@ class TraceList {
     total_time = 0;
 #endif
   }
-  void add_trace(uint64_t pc, uint64_t addr, uint64_t value, bool isRead,
+  void add_trace(uint64_t pc, uint64_t addr, uint64_t value, bool isWrite,
                  uint64_t id) {
-    auto it_pc = pc2trace.find(pc);
-    {  // pc2trace
-      if (it_pc != pc2trace.end()) {
-#ifndef DEBUG_PC
-        erase_before(it_pc->second, id);
-#endif
-      } else {
-        pc2trace[pc] = std::deque<TraceNode>();
-        it_pc = pc2trace.find(pc);
-      }
-    }
+    TraceNode tn(pc, addr, value, isWrite, id);
     auto it_val = value2trace.find(addr);
     {  // value2trace
       if (it_val != value2trace.end()) {
@@ -94,87 +205,53 @@ class TraceList {
 #ifndef DEBUG_HISTORY
     erase_before(traceHistory, id);
 #endif
-
-    std::vector<std::function<bool()>> check_pattern;
-    TraceNode tn(pc, addr, value, isRead, id);
-    {  // check patterns
-      std::function<bool()> check_fresh_access = [&]() {
-        return it_pc->second.empty();
-        // return false;
-      };
-      std::function<bool()> check_static_pattern = [&]() {
-        auto it = it_pc->second.rbegin();
-        // for (auto it = it_pc->second.rbegin(); it != it_pc->second.rend();
-        //      it++) {
-        if (it->addr == addr) return true;
-        // }
-        return false;
-      };
-      std::function<bool()> check_stride_pattern = [&]() {
-        auto it = it_pc->second.rbegin();
-        if (abs(it->addr - addr) == 8) {
-          tn.base_addr = it->base_addr;
-          return true;
-        }
-        return false;
-      };
-      std::function<bool()> check_pointer_pattern = [&]() {
-        if (it_val->second.size() == 0) return false;
-        // return true;
-        auto it = it_val->second.rbegin();
-        // for (auto it = it_val->second.rbegin(); it != it_val->second.rend();
-        //      it++) {
-        if (it != it_val->second.rend() && it->pattern >= 2) return true;
-        // }
-        return false;
-      };
-
-      std::function<bool()> check_indirect_pattern = [&]() {
-        auto it2 = it_pc->second.rbegin();
-        auto offset = abs(addr - it2->base_addr);
-        // auto it = traceHistory.rbegin();
-        for (auto it = traceHistory.rbegin(); it != traceHistory.rend(); it++) {
-          if (it->value != 0 && offset % it->value == 0 &&
-              // (offset / it->value == 8 || offset / it->value == 4) &&
-              it->pattern >= 2) {
-            // std::cerr << offset << " " << it->value << std::endl;
-            tn.base_addr = addr - offset;
-            return true;
+    auto it_meta = pc2meta.find(pc);
+    if (it_meta == pc2meta.end()) {
+      pc2meta[pc] = PCmeta();
+      it_meta = pc2meta.find(pc);
+    } else {
+      it_meta->second.count++;
+#ifdef ENABLE_TIMER
+      auto t1 = std::chrono::high_resolution_clock::now();
+#endif
+      if (it_meta->second.pattern == PATTERN::OTHER) {
+        PATTERN pattern;
+        for (bool X = true; X; X = false) {
+          if (check_static_pattern(it_meta, pc, addr)) {
+            it_meta->second.pattern = PATTERN::STATIC;
+            break;
+          }
+          if (check_stride_pattern(it_meta, pc, addr)) {
+            it_meta->second.pattern = PATTERN::STRIDE;
+            break;
+          }
+          if (check_pointerA_pattern(it_meta, it_val, addr)) {
+            it_meta->second.pattern = PATTERN::POINTER_A;
+            break;
+          }
+          // if (check_indirect_pattern(it_meta, addr)) {
+          //   it_meta->second.pattern = PATTERN::INDIRECT;
+          //   break;
+          // }
+          if (check_chain_pattern(it_meta, addr)) {
+            it_meta->second.pattern = PATTERN::CHAIN;
+            break;
           }
         }
-        return false;
-      };
-      std::function<bool()> check_chain_pattern = [&]() { return false; };
-      check_pattern.push_back(check_fresh_access);
-      check_pattern.push_back(check_static_pattern);
-      check_pattern.push_back(check_stride_pattern);
-      check_pattern.push_back(check_pointer_pattern);
-      check_pattern.push_back(check_indirect_pattern);
-      check_pattern.push_back(check_chain_pattern);
-    }
-#ifdef ENABLE_TIMER
-    auto t1 = std::chrono::high_resolution_clock::now();
-#endif
-    for (uint16_t i = 0; i < check_pattern.size(); i++) {
-      int j = pattern_mapper[i];
-      if (check_pattern[j]()) {
-        pattern_count[j]++;
-        tn.pattern = j;
-        break;
       }
-    }
+      if (it_meta->second.pattern == PATTERN::POINTER_A) {
+        if (check_pointerB_pattern(it_meta, addr)) {
+          it_meta->second.pattern = PATTERN::POINTER_B;
+          it_meta->second.confirm = true;
+        }
+      }
 #ifdef ENABLE_TIMER
-    auto t2 = std::chrono::high_resolution_clock::now();
-    total_time +=
-        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+      auto t2 = std::chrono::high_resolution_clock::now();
+      total_time +=
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 #endif
-    if (tn.pattern == PATTERN_NUM - 1) pattern_count[PATTERN_NUM - 1]++;
-    if (pc2pattern.find(pc) == pc2pattern.end())
-      pc2pattern[pc] = tn.pattern;
-    else
-      pc2pattern[pc] = std::max(tn.pattern, pc2pattern[pc]);
-    add_next(it_pc->second, tn);
-    {
+    }
+    {  // Add Next
       it_val = value2trace.find(value);
       {  // value2trace
         if (it_val == value2trace.end()) {
@@ -189,18 +266,24 @@ class TraceList {
     }
   }
   void printStats(int totalCnt) {
-    std::cout << "Total Access: " << totalCnt << std::endl;
+    std::vector<uint64_t> accessCount(PATTERN_NUM, 0), pcCount(PATTERN_NUM, 0);
+    for (auto meta : pc2meta) {
+      if (meta.second.count == 1) meta.second.pattern = PATTERN::FRESH;
+      accessCount[to_underlying(meta.second.pattern)] += meta.second.count;
+      pcCount[to_underlying(meta.second.pattern)]++;
+    }
+    std::cout << "==================================" << std::endl;
+    std::cout << "Total Access\t" << totalCnt << std::endl;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      std::cout << PATTERN_NAME[i] << "\t" << pattern_count[i] << std::endl;
+      std::cout << PATTERN_NAME[i] << "\t" << accessCount[i] << std::endl;
     }
-    std::vector<int> tmp_pattern_count(PATTERN_NUM, 0);
-    for (auto kv : pc2pattern) {
-      tmp_pattern_count[kv.second]++;
-    }
-    std::cout << "Total Unique PC: " << pc2pattern.size() << std::endl;
+    std::cout << "==================================" << std::endl;
+    std::cout << "Total PC\t" << pc2meta.size() << std::endl;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      std::cout << PATTERN_NAME[i] << "\t" << tmp_pattern_count[i] << std::endl;
+      std::cout << PATTERN_NAME[i] << "\t" << pcCount[i] << std::endl;
     }
+    std::cout << "==================================" << std::endl;
+
 #ifdef ENABLE_TIMER
     std::cout << "Total time: " << total_time / 1000000000 << "s "
               << total_time % 1000000000 / 1000000 << " ms"
@@ -222,24 +305,10 @@ int main(int argc, char *argv[]) {
   bool isend = false;
   while (true) {
     auto inst = traces->get(isend);
-
     if (isend) break;
-    for (u_int16_t i = 0; i < NUM_INSTR_SOURCES; i++) {
-      if (inst.source_memory[i] != 0) {
-        // printf("%lld %lld %lld READ\n", inst.ip, inst.source_memory[i],
-        //        inst.source_memory_value[i]);
-        traceList.add_trace(inst.ip, inst.source_memory[i],
-                            inst.source_memory_value[i], 1, ++id);
-      }
-    }
-    for (u_int16_t i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-      if (inst.destination_memory[i] != 0) {
-        // printf("%lld %lld %lld WRITE\n", inst.ip, inst.destination_memory[i],
-        //        inst.destination_memory_value[i]);
-        traceList.add_trace(inst.ip, inst.destination_memory[i],
-                            inst.destination_memory_value[i], 0, ++id);
-      }
-    }
+    if (inst.address != 0)
+      traceList.add_trace(inst.ip, inst.address, inst.value, inst.isWrite,
+                          ++id);
   }
   traceList.printStats(id);
   return 0;

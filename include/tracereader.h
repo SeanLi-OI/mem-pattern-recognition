@@ -19,9 +19,9 @@ class tracereader {
   void close();
 
   template <typename T>
-  ooo_model_instr read_single_instr(bool& isend);
+  T read_single_instr(bool& isend);
 
-  virtual ooo_model_instr get(bool& isend) = 0;
+  virtual input_instr get(bool& isend) = 0;
 };
 
 tracereader* get_tracereader(std::string fname, uint8_t cpu,

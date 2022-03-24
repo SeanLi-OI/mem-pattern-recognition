@@ -46,7 +46,7 @@ tracereader::tracereader(uint8_t cpu, std::string _ts)
 tracereader::~tracereader() { close(); }
 
 template <typename T>
-ooo_model_instr tracereader::read_single_instr(bool &isend) {
+T tracereader::read_single_instr(bool &isend) {
   T trace_read_instr;
 
   while (!fread(&trace_read_instr, sizeof(T), 1, trace_file)) {
@@ -61,8 +61,7 @@ ooo_model_instr tracereader::read_single_instr(bool &isend) {
   }
 
   // copy the instruction into the performance model's instruction format
-  ooo_model_instr retval(cpu, trace_read_instr);
-  return retval;
+  return trace_read_instr;
 }
 
 void tracereader::open(std::string trace_string) {
@@ -84,48 +83,22 @@ void tracereader::close() {
   }
 }
 
-class cloudsuite_tracereader : public tracereader {
-  ooo_model_instr last_instr;
-  bool initialized = false;
-
- public:
-  cloudsuite_tracereader(uint8_t cpu, std::string _tn)
-      : tracereader(cpu, _tn) {}
-
-  ooo_model_instr get(bool &isend) {
-    ooo_model_instr trace_read_instr =
-        read_single_instr<cloudsuite_instr>(isend);
-
-    if (!initialized) {
-      last_instr = trace_read_instr;
-      initialized = true;
-    }
-
-    last_instr.branch_target = trace_read_instr.ip;
-    ooo_model_instr retval = last_instr;
-
-    last_instr = trace_read_instr;
-    return retval;
-  }
-};
-
 class input_tracereader : public tracereader {
-  ooo_model_instr last_instr;
+  input_instr last_instr;
   bool initialized = false;
 
  public:
   input_tracereader(uint8_t cpu, std::string _tn) : tracereader(cpu, _tn) {}
 
-  ooo_model_instr get(bool &isend) {
-    ooo_model_instr trace_read_instr = read_single_instr<input_instr>(isend);
+  input_instr get(bool &isend) {
+    input_instr trace_read_instr = read_single_instr<input_instr>(isend);
 
     if (!initialized) {
       last_instr = trace_read_instr;
       initialized = true;
     }
 
-    last_instr.branch_target = trace_read_instr.ip;
-    ooo_model_instr retval = last_instr;
+    input_instr retval = last_instr;
 
     last_instr = trace_read_instr;
     return retval;
@@ -134,9 +107,5 @@ class input_tracereader : public tracereader {
 
 tracereader *get_tracereader(std::string fname, uint8_t cpu,
                              bool is_cloudsuite) {
-  if (is_cloudsuite) {
-    return new cloudsuite_tracereader(cpu, fname);
-  } else {
-    return new input_tracereader(cpu, fname);
-  }
+  return new input_tracereader(cpu, fname);
 }
