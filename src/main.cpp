@@ -135,7 +135,7 @@ class TraceList {
   }
   bool check_indirect_pattern(
       std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &addr) {
-    if (it_meta->second.offset_candidate.empty()) {
+    if (it_meta->second.pc_value_candidate.empty()) {
       for (auto trace : traceHistory) {
         if (pc2meta[trace.pc].pattern == PATTERN::STRIDE) {
           it_meta->second.pc_value_candidate[trace.pc] =
