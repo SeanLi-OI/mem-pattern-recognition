@@ -102,9 +102,16 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
       tracing_on = false;
   }
   curr_ip = (unsigned long long)ip;
+  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
+    destination_memory[i] = 0;
+  }
 
-//   fprintf(stderr, "PC: %llu MemOps: %u\n", (unsigned long long)ip,
-//           (unsigned)mem_ops);
+  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
+    source_memory[i] = 0;
+  }
+
+  //   fprintf(stderr, "PC: %llu MemOps: %u\n", (unsigned long long)ip,
+  //           (unsigned)mem_ops);
 
   if (!tracing_on) return;
 }
@@ -139,29 +146,33 @@ void dump(uint64_t pc, VOID *addr, uint64_t value, bool isWrite) {
   curr_instr.value = value;
   curr_instr.isWrite = isWrite;
   fwrite(&curr_instr, sizeof(trace_instr_format_t), 1, out);
-  //   if(10>(unsigned long long )value&&0<(unsigned long long )value)
-  //   fprintf(stderr, "%s: ADDR, VAL: %llx, %llu\n",isWrite?"W":"R", (unsigned
-  //   long long int)addr, (unsigned long long int)value);
+  // fprintf(stderr, "%s: ADDR, VAL: %llx, %llu\n", isWrite ? "W" : "R",
+  // (unsigned long long int)addr, (unsigned long long int)value);
 }
 
 void doneWrite() {
   PIN_GetLock(&globalLock, 1);
   ADDRINT *addr_ptr = (ADDRINT *)writeAddr;
   ADDRINT value = 0;
-//   fprintf(stderr, "W: ADDR, VAL: %llx, ", (unsigned long long int)writeAddr);
+  //   fprintf(stderr, "W: ADDR, VAL: %llx, ", (unsigned long long
+  //   int)writeAddr);
   if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
     PIN_SafeCopy(&value, addr_ptr, writeSize);
   }
-//   fprintf(stderr, "%llu\n", (unsigned long long int)value);
-  PIN_ReleaseLock(&globalLock);
+  //   fprintf(stderr, "%llu\n", (unsigned long long int)value);
   dump(writeIP, writeAddr, value, 1);
   hasWrite = false;
+  PIN_ReleaseLock(&globalLock);
 }
 
 void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
   if (hasWrite) doneWrite();
   if (!tracing_on) return;
 
+  if ((unsigned long long int)addr > 0x7fffffffffff ||
+      (unsigned long long int)addr < 0x7ffffffff || read_size > 8 ||
+      read_size <= 0)
+    return;
   // printf("0x%llx,%u ", (unsigned long long int)addr, read_size);
   int already_found = 0;
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
@@ -170,13 +181,14 @@ void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
       PIN_GetLock(&globalLock, 1);
       ADDRINT *addr_ptr = (ADDRINT *)addr;
       ADDRINT value = 0;
-    //   fprintf(stderr, "R: ADDR, VAL: %llx, ", (unsigned long long int)addr);
+      // fprintf(stderr, "R: ADDR, VAL: %llx, \n", (unsigned long long
+      // int)addr);
       if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
         PIN_SafeCopy(&value, addr_ptr, read_size);
       }
-    //   fprintf(stderr, "%llu\n", (unsigned long long int)value);
-      PIN_ReleaseLock(&globalLock);
+      // fprintf(stderr, "%llu\n", (unsigned long long int)value);
       dump(curr_ip, addr, value, 0);
+      PIN_ReleaseLock(&globalLock);
       break;
     }
   }
@@ -184,17 +196,30 @@ void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
     for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
       if (source_memory[i] == 0) {
         source_memory[i] = (unsigned long long int)addr;
+        PIN_GetLock(&globalLock, 1);
+        ADDRINT *addr_ptr = (ADDRINT *)addr;
+        ADDRINT value = 0;
+        // fprintf(stderr, "R: ADDR, VAL: %llx, \n", (unsigned long long
+        // int)addr);
+        if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
+          PIN_SafeCopy(&value, addr_ptr, read_size);
+        }
+        // fprintf(stderr, "%llu\n", (unsigned long long int)value);
+        PIN_ReleaseLock(&globalLock);
+        dump(curr_ip, addr, value, 0);
         break;
       }
     }
   }
-  //   fprintf(stderr, "Read: ADDR, VAL: %lx, %lu\n", (unsigned long int)addr,
-  //           (unsigned long int)value);
 }
 
 void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
   if (hasWrite) doneWrite();
   if (!tracing_on) return;
+  if ((unsigned long long int)addr > 0x7fffffffffff ||
+      (unsigned long long int)addr < 0x7ffffffff || write_size >= 8 ||
+      write_size == 0)
+    return;
 
   // printf("(0x%llx) ", (unsigned long long int) addr);
 
@@ -207,13 +232,17 @@ void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
       writeIP = curr_ip;
       writeSize = write_size;
       hasWrite = true;
+      break;
     }
-    break;
   }
   if (already_found == 0) {
     for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
       if (destination_memory[i] == 0) {
         destination_memory[i] = (unsigned long long int)addr;
+        writeAddr = addr;
+        writeIP = curr_ip;
+        writeSize = write_size;
+        hasWrite = true;
         break;
       }
     }
@@ -226,18 +255,16 @@ void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
 
 // Is called for every instruction and instruments reads and writes
 VOID Instruction(INS ins, VOID *v) {
-  // instrument memory reads and writes
-  UINT32 memOperands = INS_MemoryOperandCount(ins);
-  mem_ops = memOperands;
   // begin each instruction with this function
   UINT32 opcode = INS_Opcode(ins);
   INS_InsertCall(ins, IPOINT_BEFORE, (AFUNPTR)BeginInstruction, IARG_INST_PTR,
                  IARG_UINT32, opcode, IARG_END);
+  // instrument memory reads and writes
+  UINT32 memOperands = INS_MemoryOperandCount(ins);
+  mem_ops = memOperands;
 
   // Iterate over each memory operand of the instruction.
-  if (memOperands != 0) {
-    UINT32 memOp = 0;
-    //   for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
+  for (UINT32 memOp = 0; memOp < memOperands; memOp++) {
     if (INS_MemoryOperandIsRead(ins, memOp)) {
       UINT32 read_size = INS_MemoryOperandSize(ins, memOp);
 
@@ -286,7 +313,7 @@ int main(int argc, char *argv[]) {
   // in the command line or the command line is invalid
   if (PIN_Init(argc, argv)) return Usage();
 
-  const char *fileName = argv[argc - 1];
+  const char *fileName = KnobOutputFile.Value().c_str();
 
   out = fopen(fileName, "ab");
   if (!out) {
