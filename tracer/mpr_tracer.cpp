@@ -30,10 +30,8 @@ typedef struct trace_instr_format {
       destination_memory[NUM_INSTR_DESTINATIONS];           // output memory
   unsigned long long int source_memory[NUM_INSTR_SOURCES];  // input memory
 
-  unsigned long long int
-      destination_memory_value[NUM_INSTR_DESTINATIONS];  // output memory value
-  unsigned long long int
-      source_memory_value[NUM_INSTR_SOURCES];  // input memory value
+  unsigned long long int destination_memory_value;  // output memory value
+  unsigned long long int source_memory_value;       // input memory value
 
 } trace_instr_format_t;
 
@@ -115,14 +113,14 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
     curr_instr.destination_registers[i] = 0;
     curr_instr.destination_memory[i] = 0;
-    curr_instr.destination_memory_value[i] = 0;
   }
+  curr_instr.destination_memory_value = 0;
 
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
     curr_instr.source_registers[i] = 0;
     curr_instr.source_memory[i] = 0;
-    curr_instr.source_memory_value[i] = 0;
   }
+  curr_instr.source_memory_value = 0;
 }
 
 void EndInstruction() {
@@ -181,9 +179,9 @@ void RegRead(UINT32 i, UINT32 index, const CONTEXT *ctxt) {
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
     if (curr_instr.source_registers[i] == ((unsigned char)r)) {
       already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
+      // ADDRINT val;
+      // PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
+      // curr_instr.destination_memory_value[i] = (unsigned long long int)val;
       break;
     }
   }
@@ -219,9 +217,9 @@ void RegWrite(REG i, UINT32 index, const CONTEXT *ctxt) {
   for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
     if (curr_instr.destination_registers[i] == ((unsigned char)r)) {
       already_found = 1;
-      ADDRINT val;
-      PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
-      curr_instr.destination_memory_value[i] = (unsigned long long int)val;
+      // ADDRINT val;
+      // PIN_GetContextRegval(ctxt, r, reinterpret_cast<UINT8 *>(&val));
+      // curr_instr.destination_memory_value[i] = (unsigned long long int)val;
       break;
     }
   }
@@ -245,22 +243,21 @@ void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
   if (!tracing_on) return;
 
   // printf("0x%llx,%u ", (unsigned long long int)addr, read_size);
+  PIN_GetLock(&globalLock, 1);
+  ADDRINT *addr_ptr = (ADDRINT *)addr;
+  ADDRINT value;
+  if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
+    PIN_SafeCopy(&value, addr_ptr, read_size);
+    curr_instr.source_memory_value = (unsigned long long int)value;
+  }
+  PIN_ReleaseLock(&globalLock);
+  fprintf(stderr, "Read: ADDR, VAL: %lx, %lu\n", (unsigned long int)addr, (unsigned long int)value);
 
   // check to see if this memory read location is already in the list
   int already_found = 0;
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
     if (curr_instr.source_memory[i] == ((unsigned long long int)addr)) {
       already_found = 1;
-      {
-        PIN_GetLock(&globalLock, 1);
-        ADDRINT *addr_ptr = (ADDRINT *)addr;
-        ADDRINT value;
-        if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
-          PIN_SafeCopy(&value, addr_ptr, read_size);
-          curr_instr.source_memory_value[i] = (unsigned long long int)value;
-        }
-        PIN_ReleaseLock(&globalLock);
-      }
       break;
     }
   }
@@ -284,19 +281,8 @@ void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
   for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
     if (curr_instr.destination_memory[i] == ((unsigned long long int)addr)) {
       already_found = 1;
-      {
-        PIN_GetLock(&globalLock, 1);
-        ADDRINT *addr_ptr = (ADDRINT *)addr;
-        ADDRINT value;
-        if (addr_ptr != nullptr && addr_ptr != NULL && addr_ptr > 0) {
-          PIN_SafeCopy(&value, addr_ptr, write_size);
-          curr_instr.destination_memory_value[i] =
-              (unsigned long long int)value;
-        }
-        PIN_ReleaseLock(&globalLock);
-      }
-      break;
     }
+    break;
   }
   if (already_found == 0) {
     for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {

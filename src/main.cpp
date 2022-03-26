@@ -101,7 +101,7 @@ class TraceList {
       std::unordered_map<uint64_t, PCmeta>::iterator &it_meta, uint64_t &pc,
       uint64_t &addr) {
     auto offset = abs(it_meta->second.lastaddr - addr);
-    if (offset <= 16) std::cerr << offset << std::endl;
+    // std::cerr << offset << std::endl;
     if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return true;
     return false;
   };
@@ -229,10 +229,10 @@ class TraceList {
             it_meta->second.pattern = PATTERN::POINTER_A;
             break;
           }
-          // if (check_indirect_pattern(it_meta, addr)) {
-          //   it_meta->second.pattern = PATTERN::INDIRECT;
-          //   break;
-          // }
+          if (check_indirect_pattern(it_meta, addr)) {
+            it_meta->second.pattern = PATTERN::INDIRECT;
+            break;
+          }
           if (check_chain_pattern(it_meta, addr)) {
             it_meta->second.pattern = PATTERN::CHAIN;
             break;

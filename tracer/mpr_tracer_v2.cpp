@@ -169,10 +169,7 @@ void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
   if (hasWrite) doneWrite();
   if (!tracing_on) return;
 
-  if ((unsigned long long int)addr > 0x7fffffffffff ||
-      (unsigned long long int)addr < 0x7ffffffff || read_size > 8 ||
-      read_size <= 0)
-    return;
+  if (read_size > 8 || read_size <= 0) return;
   // printf("0x%llx,%u ", (unsigned long long int)addr, read_size);
   int already_found = 0;
   for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
@@ -216,10 +213,7 @@ void MemoryRead(VOID *addr, UINT32 index, UINT32 read_size) {
 void MemoryWrite(VOID *addr, UINT32 index, UINT32 write_size) {
   if (hasWrite) doneWrite();
   if (!tracing_on) return;
-  if ((unsigned long long int)addr > 0x7fffffffffff ||
-      (unsigned long long int)addr < 0x7ffffffff || write_size >= 8 ||
-      write_size == 0)
-    return;
+  if (write_size > 8 || write_size == 0) return;
 
   // printf("(0x%llx) ", (unsigned long long int) addr);
 
