@@ -34,10 +34,12 @@ tracereader::tracereader(uint8_t cpu, std::string _ts)
   else if (last_dot[1] == 'x')  // xz
     decomp_program = "xz";
   else {
-    std::cout
-        << "MPR does not support traces other than gz or xz compression!"
-        << std::endl;
-    assert(0);
+    // std::cout
+    //     << "MPR does not support traces other than gz or xz compression!"
+    //     << std::endl;
+    // assert(0);
+    open_raw(trace_string);
+    return;
   }
 
   open(trace_string);
@@ -48,7 +50,6 @@ tracereader::~tracereader() { close(); }
 template <typename T>
 T tracereader::read_single_instr(bool &isend) {
   T trace_read_instr;
-
   while (!fread(&trace_read_instr, sizeof(T), 1, trace_file)) {
     // reached end of file for this trace
     std::cout << "*** Reached end of trace: " << trace_string << std::endl;
@@ -57,12 +58,23 @@ T tracereader::read_single_instr(bool &isend) {
     close();
     isend = true;
     break;
-    open(trace_string);
+    // open(trace_string);
   }
 
   // copy the instruction into the performance model's instruction format
   return trace_read_instr;
 }
+
+void tracereader::open_raw(std::string trace_string) {
+  trace_file = fopen(trace_string.c_str(), "rb");
+  if (trace_file == NULL) {
+    std::cerr << std::endl
+              << "*** CANNOT OPEN TRACE FILE: " << trace_string << " ***"
+              << std::endl;
+    assert(0);
+  }
+}
+
 
 void tracereader::open(std::string trace_string) {
   char gunzip_command[4096];
@@ -84,24 +96,25 @@ void tracereader::close() {
 }
 
 class input_tracereader : public tracereader {
-  input_instr last_instr;
+  MsRecord last_instr;
   bool initialized = false;
 
  public:
   input_tracereader(uint8_t cpu, std::string _tn) : tracereader(cpu, _tn) {}
 
-  input_instr get(bool &isend) {
-    input_instr trace_read_instr = read_single_instr<input_instr>(isend);
+  MsRecord get(bool &isend) {
+    MsRecord trace_read_instr = read_single_instr<MsRecord>(isend);
 
     if (!initialized) {
-      last_instr = trace_read_instr;
+      // last_instr = trace_read_instr;
       initialized = true;
     }
 
-    input_instr retval = last_instr;
+    // MsRecord retval = last_instr;
 
-    last_instr = trace_read_instr;
-    return retval;
+    // last_instr = trace_read_instr;
+    // return retval;
+    return trace_read_instr;
   }
 };
 

@@ -30,13 +30,19 @@
 #define BRANCH_OTHER 7
 
 class LSQ_ENTRY;
-struct input_instr {
-  unsigned long long int ip;  // instruction pointer (program counter) value
 
-  unsigned long long int address;
-  unsigned long long int value;
-  bool isWrite;
+struct MemRecord {
+  uint64_t addr;
+  uint8_t content[8];
+  uint32_t len;
 };
 
+struct MsRecord {
+  uint64_t ip;
+  uint32_t tid;
+  MemRecord r0;
+  MemRecord r1;
+  MemRecord w0;
+};
 
 #endif

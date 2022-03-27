@@ -113,6 +113,14 @@ void EndInstruction() {
   }
 }
 
+static void print(ADDRINT ip, MemRecord &r, bool isWrite) {
+  if (r.len == 0) return;
+  unsigned long long tmp = 0;
+  for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  printf("%c %llu %llu %llu\n", isWrite ? 'W' : 'R', (unsigned long long)ip,
+         (unsigned long long)r.addr, tmp);
+}
+
 static void rec_inst(ADDRINT ip, MsRecord &k) {
   k.ip = ip;
   k.tid = PIN_ThreadId();
@@ -273,8 +281,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Couldn't open output trace file. Exiting." << std::endl;
     exit(1);
   }
-
+  std::cout << sizeof(ADDRINT) << " " << sizeof(THREADID) << std::endl;
   // Register function to be called to instrument instructions
+  std::cout << sizeof(MsRecord) << std::endl;
   INS_AddInstrumentFunction(instrumentor, 0);
 
   // Register function to be called when the application exits

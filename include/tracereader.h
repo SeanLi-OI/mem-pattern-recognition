@@ -16,12 +16,13 @@ class tracereader {
   tracereader(uint8_t cpu, std::string _ts);
   ~tracereader();
   void open(std::string trace_string);
+  void open_raw(std::string trace_string);
   void close();
 
   template <typename T>
   T read_single_instr(bool& isend);
 
-  virtual input_instr get(bool& isend) = 0;
+  virtual MsRecord get(bool& isend) = 0;
 };
 
 tracereader* get_tracereader(std::string fname, uint8_t cpu,

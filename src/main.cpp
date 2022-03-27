@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <queue>
 #include <set>
 #include <string>
@@ -229,10 +230,10 @@ class TraceList {
             it_meta->second.pattern = PATTERN::POINTER_A;
             break;
           }
-          if (check_indirect_pattern(it_meta, addr)) {
-            it_meta->second.pattern = PATTERN::INDIRECT;
-            break;
-          }
+          // if (check_indirect_pattern(it_meta, addr)) {
+          //   it_meta->second.pattern = PATTERN::INDIRECT;
+          //   break;
+          // }
           if (check_chain_pattern(it_meta, addr)) {
             it_meta->second.pattern = PATTERN::CHAIN;
             break;
@@ -298,6 +299,16 @@ class TraceList {
   }
 };
 
+void add_trace(TraceList &traceList, int &id, uint64_t ip, MemRecord &r,
+               bool isWrite) {
+  if (r.len == 0) return;
+  unsigned long long tmp = 0;
+  for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  traceList.add_trace(ip, r.addr, tmp, isWrite, ++id);
+  fprintf(stderr, "%c %llu %llu %llu\n", isWrite ? 'W' : 'R',
+          (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+}
+
 int main(int argc, char *argv[]) {
   auto traces = get_tracereader(argv[1], 1, 0);
   auto traceList = TraceList();
@@ -306,9 +317,9 @@ int main(int argc, char *argv[]) {
   while (true) {
     auto inst = traces->get(isend);
     if (isend) break;
-    if (inst.address != 0)
-      traceList.add_trace(inst.ip, inst.address, inst.value, inst.isWrite,
-                          ++id);
+    add_trace(traceList, id, inst.ip, inst.r0, 0);
+    add_trace(traceList, id, inst.ip, inst.r1, 0);
+    add_trace(traceList, id, inst.ip, inst.w0, 1);
   }
   traceList.printStats(id);
   return 0;
