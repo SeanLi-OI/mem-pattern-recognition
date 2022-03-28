@@ -23,10 +23,10 @@ do
     echo $app
     cd /home/lixiang/mem-pattern-recognition/test-cases/${app}
     date +"%T.%N"
-    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/mpr_tracer_v2.so -o ${trace_path}/${app}.trace -- ./run.sh 2>/home/lixiang/mem-pattern-recognition/err.txt
+    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/mpr_tracer_v3.so -o ${trace_path}/${app}.trace -- ./run.sh 2>${trace_path}/err_${app}.txt
     date +"%T.%N"
     cd ${trace_path}
-    gzip ${app}.trace -f
+    # gzip ${app}.trace -f
 done
 # cd /home/lixiang/mem-pattern-recognition/test-cases/520.omnetpp_r
 # ls -lh

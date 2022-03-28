@@ -32,14 +32,14 @@
 class LSQ_ENTRY;
 
 struct MemRecord {
-  uint64_t addr;
+  unsigned long long int addr;
   uint8_t content[8];
-  uint32_t len;
+  unsigned len;
 };
 
 struct MsRecord {
-  uint64_t ip;
-  uint32_t tid;
+  unsigned long long int ip;
+  unsigned tid;
   MemRecord r0;
   MemRecord r1;
   MemRecord w0;
