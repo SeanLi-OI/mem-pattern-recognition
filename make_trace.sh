@@ -1,8 +1,8 @@
 #!/bin/bash
 # app=loop
-# cd tracer
-# ./make_tracer.sh
-# cd ..
+cd tracer
+./make_tracer.sh
+cd ..
 # pin -t tracer/obj-intel64/mpr_tracer.so -- test-cases/${app} <test-cases/${app}.in ${app}.trace
 # xz ${app}.trace
 

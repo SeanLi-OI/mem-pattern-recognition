@@ -10,9 +10,9 @@ OBJ := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-    CPPFLAGS = -Iinclude -std=c++17 -DDEBUG -g -O0
+    CPPFLAGS = -Iinclude/ -std=c++17 -DDEBUG -g -O0
 else
-    CPPFLAGS=  -Iinclude -std=c++17 -O3
+    CPPFLAGS=  -Iinclude/ -std=c++17 -O3
 endif
 CFLAGS   :=
 LDFLAGS  :=
