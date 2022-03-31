@@ -44,7 +44,7 @@ inline unsigned long long int abs_sub(unsigned long long int a,
 const uint32_t INTERVAL = 32;
 
 class TraceList {
-  struct TraceNode {
+  struct TraceNode { // Single Memory Access
     unsigned long long int id;
     unsigned long long int pc;
     unsigned long long int addr;
@@ -56,7 +56,7 @@ class TraceList {
         : pc(_p), addr(_a), value(_v), isWrite(_i), id(_id) {}
   };
 
-  struct PCmeta {
+  struct PCmeta { // Metadata for each PC
     // INDIRECT
     std::unordered_map<
         unsigned long long int,
