@@ -11,6 +11,8 @@ class tracereader {
   std::string decomp_program;
   std::string trace_string;
 
+  void read_str(std::string& str);
+
  public:
   tracereader(const tracereader& other) = delete;
   tracereader(uint8_t cpu, std::string _ts);
@@ -19,10 +21,9 @@ class tracereader {
   void open_raw(std::string trace_string);
   void close();
 
-  template <typename T>
-  T read_single_instr(bool& isend);
+  MyInstr read_single_instr(bool& isend);
 
-  virtual MsRecord get(bool& isend) = 0;
+  virtual MyInstr get(bool& isend) = 0;
 };
 
 tracereader* get_tracereader(std::string fname, uint8_t cpu,

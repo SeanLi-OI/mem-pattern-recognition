@@ -2,6 +2,7 @@
 #define TRACE_LIST_H
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <set>
@@ -44,7 +45,7 @@ inline unsigned long long int abs_sub(unsigned long long int a,
 const uint32_t INTERVAL = 32;
 
 class TraceList {
-  struct TraceNode { // Single Memory Access
+  struct TraceNode {  // Single Memory Access
     unsigned long long int id;
     unsigned long long int pc;
     unsigned long long int addr;
@@ -56,7 +57,7 @@ class TraceList {
         : pc(_p), addr(_a), value(_v), isWrite(_i), id(_id) {}
   };
 
-  struct PCmeta { // Metadata for each PC
+  struct PCmeta {  // Metadata for each PC
     // INDIRECT
     std::unordered_map<
         unsigned long long int,
@@ -78,6 +79,7 @@ class TraceList {
     PATTERN pattern;
     unsigned long long int count;
     bool confirm;
+    std::vector<int> inst_id_list;
     PCmeta() {
       offset = lastaddr = lastpc = confirm = 0;
       pattern = PATTERN::OTHER;
@@ -92,6 +94,8 @@ class TraceList {
 #ifdef ENABLE_TIMER
   unsigned long long int total_time;
 #endif
+
+  std::fstream out;
 
   void erase_before(std::deque<TraceNode> &L, const unsigned long long int &id);
   void add_next(std::deque<TraceNode> &L, TraceNode tn);
@@ -124,9 +128,10 @@ class TraceList {
     total_time = 0;
 #endif
   }
+  void add_outfile(char filename[]) { out.open(filename, std::ios::out); }
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
-                 unsigned long long int id);
+                 unsigned long long int id, const int inst_id);
   void printStats(int totalCnt);
 };
 

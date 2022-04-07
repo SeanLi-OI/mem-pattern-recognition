@@ -47,22 +47,36 @@ tracereader::tracereader(uint8_t cpu, std::string _ts)
 
 tracereader::~tracereader() { close(); }
 
-template <typename T>
-T tracereader::read_single_instr(bool &isend) {
-  T trace_read_instr;
-  while (!fread(&trace_read_instr, sizeof(T), 1, trace_file)) {
+void tracereader::read_str(std::string &str) {
+  size_t len;
+  fread(&len, sizeof(size_t), 1, trace_file);
+  if (len > 0) {
+    str.resize(len);
+    fread(&str[0], len, 1, trace_file);
+  } else {
+    str = "";
+  }
+}
+
+MyInstr tracereader::read_single_instr(bool &isend) {
+  MsRecord trace_read_instr;
+  while (!fread(&trace_read_instr, sizeof(MsRecord), 1, trace_file)) {
     // reached end of file for this trace
     std::cout << "*** Reached end of trace: " << trace_string << std::endl;
-
     // close the trace file and re-open it
     close();
     isend = true;
     break;
     // open(trace_string);
   }
+  auto ret = MyInstr(trace_read_instr);
+  if (!isend) {
+    read_str(ret.func_name);
+    read_str(ret.image);
+  }
 
   // copy the instruction into the performance model's instruction format
-  return trace_read_instr;
+  return ret;
 }
 
 void tracereader::open_raw(std::string trace_string) {
@@ -74,7 +88,6 @@ void tracereader::open_raw(std::string trace_string) {
     assert(0);
   }
 }
-
 
 void tracereader::open(std::string trace_string) {
   char gunzip_command[4096];
@@ -96,14 +109,14 @@ void tracereader::close() {
 }
 
 class input_tracereader : public tracereader {
-  MsRecord last_instr;
+  MyInstr last_instr;
   bool initialized = false;
 
  public:
   input_tracereader(uint8_t cpu, std::string _tn) : tracereader(cpu, _tn) {}
 
-  MsRecord get(bool &isend) {
-    MsRecord trace_read_instr = read_single_instr<MsRecord>(isend);
+  MyInstr get(bool &isend) {
+    auto trace_read_instr = read_single_instr(isend);
 
     if (!initialized) {
       // last_instr = trace_read_instr;

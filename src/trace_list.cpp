@@ -16,6 +16,7 @@ bool TraceList::check_static_pattern(
   if (pc2meta[pc].lastaddr == addr) return true;
   return false;
 }
+
 bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &pc, unsigned long long int &addr) {
@@ -24,6 +25,7 @@ bool TraceList::check_stride_pattern(
   if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return true;
   return false;
 };
+
 bool TraceList::check_pointerA_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     std::unordered_map<unsigned long long int, std::deque<TraceNode>>::iterator
@@ -46,12 +48,14 @@ bool TraceList::check_pointerA_pattern(
   }
   return false;
 }
+
 bool TraceList::check_pointerB_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   if (pc2meta[it_meta->second.lastpc].pattern == PATTERN::STRIDE) return true;
   return false;
 }
+
 bool TraceList::check_indirect_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
@@ -78,6 +82,7 @@ bool TraceList::check_indirect_pattern(
     }
   }
 }
+
 bool TraceList::check_chain_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
@@ -105,7 +110,7 @@ bool TraceList::check_chain_pattern(
 void TraceList::add_trace(unsigned long long int pc,
                           unsigned long long int addr,
                           unsigned long long int value, bool isWrite,
-                          unsigned long long int id) {
+                          unsigned long long int id, const int inst_id) {
   TraceNode tn(pc, addr, value, isWrite, id);
   auto it_val = value2trace.find(addr);
   {  // value2trace
@@ -170,6 +175,7 @@ void TraceList::add_trace(unsigned long long int pc,
   {
     it_meta->second.count++;
     it_meta->second.lastaddr = addr;
+    it_meta->second.inst_id_list.push_back(inst_id);
   }
   {  // Add Next
     it_val = value2trace.find(value);
@@ -185,6 +191,7 @@ void TraceList::add_trace(unsigned long long int pc,
     add_next(traceHistory, tn);
   }
 }
+
 void TraceList::printStats(int totalCnt) {
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
@@ -193,6 +200,13 @@ void TraceList::printStats(int totalCnt) {
       meta.second.pattern = PATTERN::FRESH;
     accessCount[to_underlying(meta.second.pattern)] += meta.second.count;
     pcCount[to_underlying(meta.second.pattern)]++;
+  }
+  if (out) {
+    for (auto meta : pc2meta) {
+      out << std::hex << meta.first << " "
+          << PATTERN_NAME[to_underlying(meta.second.pattern)] << std::endl;
+    }
+    out.close();
   }
   std::cout << "==================================" << std::endl;
   std::cout << "Total Access\t" << totalCnt << std::endl;
