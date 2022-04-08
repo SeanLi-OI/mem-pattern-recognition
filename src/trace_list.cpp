@@ -81,6 +81,7 @@ bool TraceList::check_indirect_pattern(
       }
     }
   }
+  return false;
 }
 
 bool TraceList::check_chain_pattern(
@@ -204,7 +205,8 @@ void TraceList::printStats(int totalCnt) {
   if (out) {
     for (auto meta : pc2meta) {
       out << std::hex << meta.first << " "
-          << PATTERN_NAME[to_underlying(meta.second.pattern)] << std::endl;
+          << PATTERN_NAME[to_underlying(meta.second.pattern)] << " " << std::dec
+          << meta.second.count << std::endl;
     }
     out.close();
   }

@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#define DEBUG_VALUE
 // #define DEBUG_HISTORY
 #define ENABLE_TIMER
 
