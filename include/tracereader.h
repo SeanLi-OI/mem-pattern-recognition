@@ -10,8 +10,12 @@ class tracereader {
   std::string cmd_fmtstr;
   std::string decomp_program;
   std::string trace_string;
+  size_t has_read;
+  size_t total_len;
 
   void read_str(std::string& str);
+  size_t file_size2(const char* filename);
+  void print_progress(size_t current, size_t all);
 
  public:
   tracereader(const tracereader& other) = delete;

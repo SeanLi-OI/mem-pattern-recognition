@@ -19,8 +19,8 @@ int main(int argc, char *argv[]) {
   int id = 0;
   int inst_id = 0;
   bool isend = false;
-  if (argc >= 3) {
-    traceList.add_outfile(argv[2]);
+  if (argc >= 4) {
+    traceList.add_outfile(argv[3]);
   }
   while (true) {
     auto inst = traces->get(isend);
@@ -32,6 +32,6 @@ int main(int argc, char *argv[]) {
     add_trace(traceList, id, inst.ip, inst.r1, 0, inst_id);
     add_trace(traceList, id, inst.ip, inst.w0, 1, inst_id);
   }
-  traceList.printStats(id);
+  traceList.printStats(id, argv[2]);
   return 0;
 }

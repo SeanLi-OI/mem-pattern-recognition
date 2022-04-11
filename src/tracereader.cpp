@@ -1,10 +1,30 @@
 #include "tracereader.h"
 
+#include <sys/stat.h>
+
 #include <cassert>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <string>
+size_t tracereader::file_size2(const char *filename) {
+  struct stat statbuf;
+  stat(filename, &statbuf);
+  size_t size = statbuf.st_size;
+  return size;
+}
+
+void tracereader::print_progress(size_t current, size_t all) {
+  int progress = current * 100.0 / all;
+  printf("\r");
+  for (int i = 0; i < 100; i++) {
+    if (i < progress)
+      printf("■");
+    else
+      printf("□");
+  }
+  printf("[%6.2f%%]", (float)current / all * 100);
+}
 
 tracereader::tracereader(uint8_t cpu, std::string _ts)
     : cpu(cpu), trace_string(_ts) {
@@ -41,7 +61,7 @@ tracereader::tracereader(uint8_t cpu, std::string _ts)
     open_raw(trace_string);
     return;
   }
-
+  has_read = 0;
   open(trace_string);
 }
 
@@ -50,9 +70,11 @@ tracereader::~tracereader() { close(); }
 void tracereader::read_str(std::string &str) {
   size_t len;
   fread(&len, sizeof(size_t), 1, trace_file);
+  has_read += sizeof(size_t);
   if (len > 0) {
     str.resize(len);
     fread(&str[0], len, 1, trace_file);
+    has_read += len;
   } else {
     str = "";
   }
@@ -60,7 +82,10 @@ void tracereader::read_str(std::string &str) {
 
 MyInstr tracereader::read_single_instr(bool &isend) {
   MsRecord trace_read_instr;
-  while (!fread(&trace_read_instr, sizeof(MsRecord), 1, trace_file)) {
+  size_t len;
+  while (true) {
+    len = fread(&trace_read_instr, sizeof(MsRecord), 1, trace_file);
+    if (len != 0) break;
     // reached end of file for this trace
     std::cout << "*** Reached end of trace: " << trace_string << std::endl;
     // close the trace file and re-open it
@@ -69,17 +94,18 @@ MyInstr tracereader::read_single_instr(bool &isend) {
     break;
     // open(trace_string);
   }
+  has_read += len;
   auto ret = MyInstr(trace_read_instr);
   if (!isend) {
     read_str(ret.func_name);
     read_str(ret.image);
   }
-
-  // copy the instruction into the performance model's instruction format
+  // print_progress(has_read, total_len);
   return ret;
 }
 
 void tracereader::open_raw(std::string trace_string) {
+  total_len = file_size2(trace_string.c_str());
   trace_file = fopen(trace_string.c_str(), "rb");
   if (trace_file == NULL) {
     std::cerr << std::endl
