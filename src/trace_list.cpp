@@ -206,10 +206,12 @@ void TraceList::printStats(int totalCnt, char *filename) {
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
   for (auto meta : pc2meta) {
-    if (meta.second.is_stride())
-      meta.second.pattern = PATTERN::STRIDE;
-    else if (meta.second.count < 10 && meta.second.pattern == PATTERN::OTHER)
-      meta.second.pattern = PATTERN::FRESH;
+    if (meta.second.pattern == PATTERN::OTHER) {
+      if (meta.second.is_stride())
+        meta.second.pattern = PATTERN::STRIDE;
+      else if (meta.second.count < 10)
+        meta.second.pattern = PATTERN::FRESH;
+    }
     accessCount[to_underlying(meta.second.pattern)] += meta.second.count;
     pcCount[to_underlying(meta.second.pattern)]++;
   }
@@ -236,13 +238,13 @@ void TraceList::printStats(int totalCnt, char *filename) {
 
 #ifdef ENABLE_TIMER
   fout << "Total time: " << total_time / 1000000000 << "s "
-            << total_time % 1000000000 / 1000000 << " ms"
-            << total_time % 1000000 / 1000 << " us" << total_time % 1000
-            << " ns" << std::endl;
+       << total_time % 1000000000 / 1000000 << " ms"
+       << total_time % 1000000 / 1000 << " us" << total_time % 1000 << " ns"
+       << std::endl;
   total_time /= totalCnt;
   fout << "Per access time: " << total_time / 1000000000 << "s "
-            << total_time % 1000000000 / 1000000 << " ms"
-            << total_time % 1000000 / 1000 << " us" << total_time % 1000
-            << " ns" << std::endl;
+       << total_time % 1000000000 / 1000000 << " ms"
+       << total_time % 1000000 / 1000 << " us" << total_time % 1000 << " ns"
+       << std::endl;
 #endif
 }

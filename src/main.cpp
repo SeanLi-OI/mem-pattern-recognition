@@ -15,12 +15,15 @@ void add_trace(TraceList &traceList, int &id, unsigned long long int ip,
 
 int main(int argc, char *argv[]) {
   auto traces = get_tracereader(argv[1], 1, 0);
+  std::cout << "Reading trace from " << argv[1] << std::endl;
+  std::cout << "Writing stats to " << argv[2] << std::endl;
   auto traceList = TraceList();
   int id = 0;
   int inst_id = 0;
   bool isend = false;
   if (argc >= 4) {
     traceList.add_outfile(argv[3]);
+    std::cout << "Writing pattern to " << argv[3] << std::endl;
   }
   while (true) {
     auto inst = traces->get(isend);

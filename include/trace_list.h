@@ -1,6 +1,8 @@
 #ifndef TRACE_LIST_H
 #define TRACE_LIST_H
 
+#include <assert.h>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -133,7 +135,10 @@ class TraceList {
     total_time = 0;
 #endif
   }
-  void add_outfile(char filename[]) { out.open(filename, std::ios::out); }
+  void add_outfile(char filename[]) {
+    out.open(filename, std::ios::out);
+    assert(out);
+  }
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
                  unsigned long long int id, const int inst_id);
