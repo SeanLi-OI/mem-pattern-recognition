@@ -21,8 +21,18 @@ bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &pc, unsigned long long int &addr) {
   auto offset = abs_sub(it_meta->second.lastaddr, addr);
+  if (it_meta->second.cannot_be_stride) return false;
+  if (it_meta->second.offset_stride != 0) {
+    if (offset == it_meta->second.offset_stride)
+      return true;
+    else
+      it_meta->second.cannot_be_stride = true;
+  } else {
+    it_meta->second.offset_stride = offset;
+  }
   // std::cerr << offset << std::endl;
-  if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return true;
+  // if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return
+  // true;
   return false;
 };
 
@@ -52,7 +62,7 @@ bool TraceList::check_pointerA_pattern(
 bool TraceList::check_pointerB_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  if (pc2meta[it_meta->second.lastpc].pattern == PATTERN::STRIDE) return true;
+  if (pc2meta[it_meta->second.lastpc].is_stride()) return true;
   return false;
 }
 
@@ -61,14 +71,14 @@ bool TraceList::check_indirect_pattern(
     unsigned long long int &addr) {
   if (it_meta->second.pc_value_candidate.empty()) {
     for (auto trace : traceHistory) {
-      if (pc2meta[trace.pc].pattern == PATTERN::STRIDE) {
+      if (pc2meta[trace.pc].is_stride()) {
         it_meta->second.pc_value_candidate[trace.pc] =
             std::make_pair(trace.value, addr);
       }
     }
   } else {
     for (auto trace : traceHistory) {
-      if (pc2meta[trace.pc].pattern == PATTERN::STRIDE) {
+      if (pc2meta[trace.pc].is_stride()) {
         auto it = it_meta->second.pc_value_candidate.find(trace.pc);
         if (it != it_meta->second.pc_value_candidate.end() &&
             addr != it->second.second && trace.value != it->second.first &&
@@ -144,8 +154,7 @@ void TraceList::add_trace(unsigned long long int pc,
           break;
         }
         if (check_stride_pattern(it_meta, pc, addr)) {
-          it_meta->second.pattern = PATTERN::STRIDE;
-          break;
+          it_meta->second.maybe_stride = true;
         }
         if (check_pointerA_pattern(it_meta, it_val, addr)) {
           it_meta->second.pattern = PATTERN::POINTER_A;
@@ -193,11 +202,13 @@ void TraceList::add_trace(unsigned long long int pc,
   }
 }
 
-void TraceList::printStats(int totalCnt) {
+void TraceList::printStats(int totalCnt, char *filename) {
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
   for (auto meta : pc2meta) {
-    if (meta.second.count == 1 || meta.second.pattern == PATTERN::OTHER)
+    if (meta.second.is_stride())
+      meta.second.pattern = PATTERN::STRIDE;
+    else if (meta.second.count < 10 && meta.second.pattern == PATTERN::OTHER)
       meta.second.pattern = PATTERN::FRESH;
     accessCount[to_underlying(meta.second.pattern)] += meta.second.count;
     pcCount[to_underlying(meta.second.pattern)]++;
@@ -210,25 +221,26 @@ void TraceList::printStats(int totalCnt) {
     }
     out.close();
   }
-  std::cout << "==================================" << std::endl;
-  std::cout << "Total Access\t" << totalCnt << std::endl;
-  for (int i = 0; i < PATTERN_NUM - 1; i++) {
-    std::cout << PATTERN_NAME[i] << "\t" << accessCount[i] << std::endl;
+  std::ofstream fout(filename);
+  fout << "==================================" << std::endl;
+  fout << "Total Access\t" << totalCnt << std::endl;
+  for (int i = 0; i < PATTERN_NUM; i++) {
+    fout << PATTERN_NAME[i] << "\t" << accessCount[i] << std::endl;
   }
-  std::cout << "==================================" << std::endl;
-  std::cout << "Total PC\t" << pc2meta.size() << std::endl;
-  for (int i = 0; i < PATTERN_NUM - 1; i++) {
-    std::cout << PATTERN_NAME[i] << "\t" << pcCount[i] << std::endl;
+  fout << "==================================" << std::endl;
+  fout << "Total PC\t" << pc2meta.size() << std::endl;
+  for (int i = 0; i < PATTERN_NUM; i++) {
+    fout << PATTERN_NAME[i] << "\t" << pcCount[i] << std::endl;
   }
-  std::cout << "==================================" << std::endl;
+  fout << "==================================" << std::endl;
 
 #ifdef ENABLE_TIMER
-  std::cout << "Total time: " << total_time / 1000000000 << "s "
+  fout << "Total time: " << total_time / 1000000000 << "s "
             << total_time % 1000000000 / 1000000 << " ms"
             << total_time % 1000000 / 1000 << " us" << total_time % 1000
             << " ns" << std::endl;
   total_time /= totalCnt;
-  std::cout << "Per access time: " << total_time / 1000000000 << "s "
+  fout << "Per access time: " << total_time / 1000000000 << "s "
             << total_time % 1000000000 / 1000000 << " ms"
             << total_time % 1000000 / 1000 << " us" << total_time % 1000
             << " ns" << std::endl;

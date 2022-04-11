@@ -56,7 +56,8 @@ class TraceList {
         : pc(_p), addr(_a), value(_v), isWrite(_i), id(_id) {}
   };
 
-  struct PCmeta {  // Metadata for each PC
+  class PCmeta {  // Metadata for each PC
+   public:
     // INDIRECT
     std::unordered_map<
         unsigned long long int,
@@ -73,6 +74,9 @@ class TraceList {
 
     // STATIC & STRIDE
     unsigned long long int lastaddr;
+    unsigned long long int offset_stride;
+    bool maybe_stride;
+    bool cannot_be_stride;
 
     // common
     PATTERN pattern;
@@ -80,10 +84,12 @@ class TraceList {
     bool confirm;
     std::vector<int> inst_id_list;
     PCmeta() {
-      offset = lastaddr = lastpc = confirm = 0;
+      offset = lastaddr = lastpc = confirm = offset_stride = maybe_stride =
+          cannot_be_stride = 0;
       pattern = PATTERN::OTHER;
       count = 1;
     }
+    bool is_stride() { return maybe_stride && !cannot_be_stride; }
   };
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
@@ -131,7 +137,7 @@ class TraceList {
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
                  unsigned long long int id, const int inst_id);
-  void printStats(int totalCnt);
+  void printStats(int totalCnt, char *filename);
 };
 
 #endif
