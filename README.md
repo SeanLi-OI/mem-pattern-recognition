@@ -3,7 +3,7 @@
 Union tracer输出适合champsim和我们mpr工具的两份trace
 ```bash
 # 抓取trace
-binary_file= # 应用可执行
+binary_file= # 应用可执行文件
 app_input= # 应用输入文件
 champsim_trace_file= # 输出champsim的trace
 mpr_trace_file= # 输出mpr的trace
@@ -35,7 +35,7 @@ out_file= # 输出最终的csv文件（注意csv文件以,,分隔，并不能直
 
 # Misc
 
-整个项目大概就这些，编译链接由Makefile驱动
+整个项目大概就这些，编译链接由Makefile驱动，本来想把魔改的champsim作为submodule搞进来，但懒得搞了，就这样凑合先用把
 ```
 mem-Pattern-Recognition/
 ├── include
