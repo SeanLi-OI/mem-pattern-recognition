@@ -21,12 +21,9 @@ bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &pc, unsigned long long int &addr) {
   auto offset = abs_sub(it_meta->second.lastaddr, addr);
-  if (it_meta->second.cannot_be_stride) return false;
   if (it_meta->second.offset_stride != 0) {
     if (offset == it_meta->second.offset_stride)
       return true;
-    else
-      it_meta->second.cannot_be_stride = true;
   } else {
     it_meta->second.offset_stride = offset;
   }
@@ -70,14 +67,14 @@ bool TraceList::check_indirect_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   if (it_meta->second.pc_value_candidate.empty()) {
-    for (auto trace : traceHistory) {
+    for (auto &trace : traceHistory) {
       if (pc2meta[trace.pc].is_stride()) {
         it_meta->second.pc_value_candidate[trace.pc] =
             std::make_pair(trace.value, addr);
       }
     }
   } else {
-    for (auto trace : traceHistory) {
+    for (auto &trace : traceHistory) {
       if (pc2meta[trace.pc].is_stride()) {
         auto it = it_meta->second.pc_value_candidate.find(trace.pc);
         if (it != it_meta->second.pc_value_candidate.end() &&
@@ -98,13 +95,13 @@ bool TraceList::check_chain_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   if (it_meta->second.offset_candidate.empty()) {
-    for (auto trace : traceHistory) {
+    for (auto &trace : traceHistory) {
       if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A) {
         it_meta->second.offset_candidate.insert(abs_sub(trace.value, addr));
       }
     }
   } else {
-    for (auto trace : traceHistory) {
+    for (auto &trace : traceHistory) {
       if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A &&
           it_meta->second.offset_candidate.find(abs_sub(trace.value, addr)) !=
               it_meta->second.offset_candidate.end()) {
@@ -205,7 +202,7 @@ void TraceList::add_trace(unsigned long long int pc,
 void TraceList::printStats(int totalCnt, char *filename) {
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
-  for (auto meta : pc2meta) {
+  for (auto &meta : pc2meta) {
     if (meta.second.pattern == PATTERN::OTHER) {
       if (meta.second.is_stride())
         meta.second.pattern = PATTERN::STRIDE;
@@ -216,7 +213,7 @@ void TraceList::printStats(int totalCnt, char *filename) {
     pcCount[to_underlying(meta.second.pattern)]++;
   }
   if (out) {
-    for (auto meta : pc2meta) {
+    for (auto &meta : pc2meta) {
       out << std::hex << meta.first << " "
           << PATTERN_NAME[to_underlying(meta.second.pattern)] << " " << std::dec
           << meta.second.count << std::endl;

@@ -78,7 +78,7 @@ class TraceList {
     unsigned long long int lastaddr;
     unsigned long long int offset_stride;
     bool maybe_stride;
-    bool cannot_be_stride;
+    // bool cannot_be_stride;
 
     // common
     PATTERN pattern;
@@ -86,12 +86,12 @@ class TraceList {
     bool confirm;
     std::vector<int> inst_id_list;
     PCmeta() {
-      offset = lastaddr = lastpc = confirm = offset_stride = maybe_stride =
-          cannot_be_stride = 0;
+      offset = lastaddr = lastpc = confirm = offset_stride = maybe_stride =0;
+          // cannot_be_stride = 0;
       pattern = PATTERN::OTHER;
       count = 1;
     }
-    bool is_stride() { return maybe_stride && !cannot_be_stride; }
+    bool is_stride() { return maybe_stride ;}//&& !cannot_be_stride; }
   };
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
