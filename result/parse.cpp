@@ -9,6 +9,8 @@
 #include <string>
 #include <unordered_map>
 
+const std::string sep = "\t";
+
 // Execute shell command and get stdout
 std::string exec(const char* cmd) {
   std::array<char, 128> buffer;
@@ -129,11 +131,13 @@ int main(int argc, char* argv[]) {
   in2.close();
   out.open(argv[3], std::ios::out);
   assert(out);
-  for (auto meta : pc2meta) {
+  out << "PC" << sep << "Count" << sep << "Miss Count" << sep << "Pattern"
+      << std::endl;
+  for (auto& meta : pc2meta) {
     auto ret = pc2line(argv[4], meta.first);
-    out << std::hex << meta.first << ",," << std::dec << meta.second.count << ",,"
-        << std::dec << meta.second.miss_count << ",,"
-        << PATTERN_NAME[to_underlying(meta.second.pattern)] << ",," << ret
+    out << std::hex << meta.first << sep << std::dec << meta.second.count << sep
+        << std::dec << meta.second.miss_count << sep
+        << PATTERN_NAME[to_underlying(meta.second.pattern)] << sep << ret
         << std::endl;
   }
   return 0;
