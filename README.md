@@ -19,7 +19,7 @@ pattern_file= # 分别给出每个PC的类别，以及执行次数
 /home/lixiang/mem-pattern-recognition/bin/mpr ${mpr_trace_file} ${stat_file} ${pattern_file} 2>err.txt
 ```
 
-(optinal) 通过champsim获取miss情况
+(optional) 通过champsim获取miss情况
 ```bash
 miss_file= # 输出miss信息
 /home/lixiang/ChampSim/bin/champsim --warmup_instructions 0 --simulation_instructions ${trace_len} ${champsim_trace_file} 2>${miss_file}
@@ -27,7 +27,7 @@ miss_file= # 输出miss信息
 
 (optional) 通过parser分析PC类别以及miss情况并给出对应源代码
 ```bash
-out_file= # 输出最终的csv文件（注意csv文件以,,分隔，并不能直接打开，可以拷贝到excel，批量替换成其他字符，再进行分列）
+out_file= # 输出最终的csv文件（注意csv文件以'\t'分隔而非','，并不能直接打开，可以拷贝到excel，再进行分列）
 /home/lixiang/mem-pattern-recognition/result/parse ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>err.txt
 ```
 
@@ -45,6 +45,8 @@ mem-Pattern-Recognition/
 │   └── tracereader.h
 ├── Makefile
 ├── README.md
+├── result
+│   └── parse.cpp
 ├── src
 │   ├── main.cpp
 │   ├── trace_list.cpp
