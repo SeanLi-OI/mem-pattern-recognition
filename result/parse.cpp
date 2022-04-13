@@ -35,14 +35,13 @@ std::string int_to_hex(T i) {
 
 // PATTERN constant variable
 const int PATTERN_NUM = 8;
-const std::string PATTERN_NAME[] = {"fresh",    "static",   "stride",
-                                    "pointerA", "pointerB", "indirect",
-                                    "chain",    "other"};
+const std::string PATTERN_NAME[] = {"fresh",    "static",   "stride", "pointer",
+                                    "pointerB", "indirect", "chain",  "other"};
 enum PATTERN : uint16_t {
   FRESH,
   STATIC,
   STRIDE,
-  POINTER_A,
+  pointer,
   POINTER_B,
   INDIRECT,
   CHAIN,
@@ -50,7 +49,7 @@ enum PATTERN : uint16_t {
 };
 static std::unordered_map<std::string, PATTERN> const table = {
     {"fresh", PATTERN::FRESH},        {"static", PATTERN::STATIC},
-    {"stride", PATTERN::STRIDE},      {"pointerA", PATTERN::POINTER_A},
+    {"stride", PATTERN::STRIDE},      {"pointer", PATTERN::pointer},
     {"pointerB", PATTERN::POINTER_B}, {"indirect", PATTERN::INDIRECT},
     {"chain", PATTERN::CHAIN},        {"other", PATTERN::OTHER}};
 template <typename E>
