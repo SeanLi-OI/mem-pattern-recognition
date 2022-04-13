@@ -19,14 +19,15 @@
 #include <chrono>
 #endif
 
-const int PATTERN_NUM = 8;
+const int PATTERN_NUM = 9;
 const std::string PATTERN_NAME[] = {"fresh\t",  "static\t", "stride\t",
-                                    "pointerA", "pointerB", "indirect",
-                                    "chain\t",  "other\t"};
+                                    "pointer",  "pointerA", "pointerB",
+                                    "indirect", "chain\t",  "other\t"};
 enum PATTERN : uint16_t {
   FRESH,
   STATIC,
   STRIDE,
+  pointer,
   POINTER_A,
   POINTER_B,
   INDIRECT,
@@ -44,6 +45,9 @@ inline unsigned long long int abs_sub(unsigned long long int a,
 }
 
 const uint32_t INTERVAL = 32;
+const uint16_t STRIDE_THERSHOLD = 8;
+const uint16_t POINTER_A_THERSHOLD = 8;
+const uint16_t INDIRECT_THERSHOLD = 4;
 
 class TraceList {
   struct TraceNode {  // Single Memory Access
@@ -61,24 +65,40 @@ class TraceList {
   class PCmeta {  // Metadata for each PC
    public:
     // INDIRECT
-    std::unordered_map<
-        unsigned long long int,
-        std::pair<unsigned long long int, unsigned long long int>>
+    struct pc_value_meta {
+      unsigned long long int value;
+      unsigned long long int addr;
+      int offset;
+      int confidence;
+      pc_value_meta() {}
+      pc_value_meta(unsigned long long int _v, unsigned long long int _a)
+          : value(_v), addr(_a) {
+        offset = 0;
+        confidence = 0;
+      }
+    };
+    std::unordered_map<unsigned long long int, pc_value_meta>
         pc_value_candidate;
 
     // CHAIN
     std::set<unsigned long long int> offset_candidate;
     unsigned long long int offset;
 
-    // POINTER_A
+    // pointer
     std::set<unsigned long long int> lastpc_candidate;
     unsigned long long int lastpc;
 
+    // pointerA
+    unsigned long long int pointerA_offset_candidate;
+    unsigned long long int lastvalue;
+    int pointerA_confidence;
+
     // STATIC & STRIDE
     unsigned long long int lastaddr;
+
+    // STRIDE
     unsigned long long int offset_stride;
-    bool maybe_stride;
-    // bool cannot_be_stride;
+    int stride_confidence;
 
     // common
     PATTERN pattern;
@@ -86,12 +106,12 @@ class TraceList {
     bool confirm;
     std::vector<int> inst_id_list;
     PCmeta() {
-      offset = lastaddr = lastpc = confirm = offset_stride = maybe_stride =0;
-          // cannot_be_stride = 0;
+      offset = lastaddr = lastpc = confirm = offset_stride = stride_confidence =
+          0;
       pattern = PATTERN::OTHER;
       count = 1;
     }
-    bool is_stride() { return maybe_stride ;}//&& !cannot_be_stride; }
+    bool is_stride() { return stride_confidence >= STRIDE_THERSHOLD; }
   };
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
@@ -113,10 +133,13 @@ class TraceList {
   bool check_stride_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &pc, unsigned long long int &addr);
-  bool check_pointerA_pattern(
+  bool check_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       std::unordered_map<unsigned long long int,
                          std::deque<TraceNode>>::iterator &it_val,
+      unsigned long long int &addr);
+  bool check_pointerA_pattern(
+      std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
   bool check_pointerB_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,

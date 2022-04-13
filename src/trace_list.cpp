@@ -22,18 +22,21 @@ bool TraceList::check_stride_pattern(
     unsigned long long int &pc, unsigned long long int &addr) {
   auto offset = abs_sub(it_meta->second.lastaddr, addr);
   if (it_meta->second.offset_stride != 0) {
-    if (offset == it_meta->second.offset_stride)
-      return true;
+    if (offset == it_meta->second.offset_stride) {
+      it_meta->second.stride_confidence++;
+    } else {
+      it_meta->second.stride_confidence--;
+      if (it_meta->second.stride_confidence == 0)
+        it_meta->second.offset_stride = offset;
+    }
+    if (it_meta->second.is_stride()) return true;
   } else {
     it_meta->second.offset_stride = offset;
   }
-  // std::cerr << offset << std::endl;
-  // if (offset == 4 || offset == 8 || offset == 16 || offset == 32) return
-  // true;
   return false;
 };
 
-bool TraceList::check_pointerA_pattern(
+bool TraceList::check_pointer_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     std::unordered_map<unsigned long long int, std::deque<TraceNode>>::iterator
         &it_val,
@@ -56,6 +59,31 @@ bool TraceList::check_pointerA_pattern(
   return false;
 }
 
+bool TraceList::check_pointerA_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  if (it_meta->second.pointerA_offset_candidate == 0) {
+    it_meta->second.pointerA_offset_candidate =
+        addr - it_meta->second.lastvalue;
+  } else {
+    if (it_meta->second.pointerA_offset_candidate ==
+        addr - it_meta->second.lastvalue) {
+      it_meta->second.pointerA_confidence++;
+      if (it_meta->second.pointerA_confidence >= POINTER_A_THERSHOLD) {
+        return true;
+      }
+    } else {
+      it_meta->second.pointerA_confidence--;
+      if (it_meta->second.pointerA_confidence < 0) {
+        it_meta->second.pointerA_offset_candidate =
+            addr - it_meta->second.lastvalue;
+        it_meta->second.pointerA_confidence = 0;
+      }
+    }
+  }
+  return false;
+}
+
 bool TraceList::check_pointerB_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
@@ -66,25 +94,34 @@ bool TraceList::check_pointerB_pattern(
 bool TraceList::check_indirect_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  if (it_meta->second.pc_value_candidate.empty()) {
-    for (auto &trace : traceHistory) {
-      if (pc2meta[trace.pc].is_stride()) {
-        it_meta->second.pc_value_candidate[trace.pc] =
-            std::make_pair(trace.value, addr);
-      }
-    }
-  } else {
-    for (auto &trace : traceHistory) {
-      if (pc2meta[trace.pc].is_stride()) {
-        auto it = it_meta->second.pc_value_candidate.find(trace.pc);
-        if (it != it_meta->second.pc_value_candidate.end() &&
-            addr != it->second.second && trace.value != it->second.first &&
-            (addr - it->second.second) % (trace.value - it->second.first) ==
-                0) {
-          it_meta->second.pc_value_candidate.clear();
-          it_meta->second.confirm = true;
-          return true;
+  for (auto &trace : traceHistory) {
+    if (pc2meta[trace.pc].is_stride()) {
+      auto it = it_meta->second.pc_value_candidate.find(trace.pc);
+      if (it != it_meta->second.pc_value_candidate.end()) {
+        if (addr != it->second.addr && trace.value != it->second.value &&
+            (addr - it->second.addr) % (trace.value - it->second.value) == 0) {
+          if (it->second.offset == 0) {
+            it->second.offset =
+                (addr - it->second.addr) / (trace.value - it->second.value);
+          } else if (it->second.offset ==
+                     (addr - it->second.addr) /
+                         (trace.value - it->second.value)) {
+            it->second.confidence++;
+          } else {
+            it->second.confidence--;
+            if (it->second.confidence < 0) {
+              it->second.offset =
+                  (addr - it->second.addr) / (trace.value - it->second.value);
+              it->second.confidence = 0;
+            }
+          }
+          if (it->second.confidence >= INDIRECT_THERSHOLD) {
+            return true;
+          }
         }
+      } else {
+        it_meta->second.pc_value_candidate[trace.pc] =
+            PCmeta::pc_value_meta(trace.value, addr);
       }
     }
   }
@@ -96,18 +133,17 @@ bool TraceList::check_chain_pattern(
     unsigned long long int &addr) {
   if (it_meta->second.offset_candidate.empty()) {
     for (auto &trace : traceHistory) {
-      if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A) {
+      if (pc2meta[trace.pc].pattern == PATTERN::pointer) {
         it_meta->second.offset_candidate.insert(abs_sub(trace.value, addr));
       }
     }
   } else {
     for (auto &trace : traceHistory) {
-      if (pc2meta[trace.pc].pattern == PATTERN::POINTER_A &&
+      if (pc2meta[trace.pc].pattern == PATTERN::pointer &&
           it_meta->second.offset_candidate.find(abs_sub(trace.value, addr)) !=
               it_meta->second.offset_candidate.end()) {
         it_meta->second.offset_candidate.clear();
         it_meta->second.offset = abs_sub(trace.value, addr);
-        it_meta->second.confirm = true;
         return true;
       }
     }
@@ -148,13 +184,16 @@ void TraceList::add_trace(unsigned long long int pc,
       for (bool X = true; X; X = false) {
         if (check_static_pattern(it_meta, pc, addr)) {
           it_meta->second.pattern = PATTERN::STATIC;
-          break;
         }
         if (check_stride_pattern(it_meta, pc, addr)) {
-          it_meta->second.maybe_stride = true;
+          it_meta->second.pattern = PATTERN::STRIDE;
         }
-        if (check_pointerA_pattern(it_meta, it_val, addr)) {
+        if (check_pointer_pattern(it_meta, it_val, addr)) {
+          it_meta->second.pattern = PATTERN::pointer;
+        }
+        if (check_pointerA_pattern(it_meta, addr)) {
           it_meta->second.pattern = PATTERN::POINTER_A;
+          it_meta->second.confirm = true;
           break;
         }
         if (check_indirect_pattern(it_meta, addr)) {
@@ -163,11 +202,12 @@ void TraceList::add_trace(unsigned long long int pc,
         }
         if (check_chain_pattern(it_meta, addr)) {
           it_meta->second.pattern = PATTERN::CHAIN;
+          it_meta->second.confirm = true;
           break;
         }
       }
     }
-    if (it_meta->second.pattern == PATTERN::POINTER_A) {
+    if (it_meta->second.pattern == PATTERN::pointer) {
       if (check_pointerB_pattern(it_meta, addr)) {
         it_meta->second.pattern = PATTERN::POINTER_B;
         it_meta->second.confirm = true;
@@ -183,6 +223,7 @@ void TraceList::add_trace(unsigned long long int pc,
     it_meta->second.count++;
     it_meta->second.lastaddr = addr;
     it_meta->second.inst_id_list.push_back(inst_id);
+    it_meta->second.lastvalue = value;
   }
   {  // Add Next
     it_val = value2trace.find(value);
