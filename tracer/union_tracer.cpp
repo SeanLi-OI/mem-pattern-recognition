@@ -89,7 +89,7 @@ KNOB<UINT64> KnobSkipInstructions(
     "How many instructions to skip before tracing begins");
 
 KNOB<UINT64> KnobTraceInstructions(KNOB_MODE_WRITEONCE, "pintool", "t",
-                                   "1000000000",
+                                   "3000000000",
                                    "How many instructions to trace");
 
 /* ===================================================================== */
