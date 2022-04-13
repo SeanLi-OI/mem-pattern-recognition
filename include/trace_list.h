@@ -44,10 +44,12 @@ inline unsigned long long int abs_sub(unsigned long long int a,
   return a > b ? a - b : b - a;
 }
 
-const uint32_t INTERVAL = 32;
-const uint16_t STRIDE_THERSHOLD = 8;
-const uint16_t POINTER_A_THERSHOLD = 8;
-const uint16_t INDIRECT_THERSHOLD = 4;
+const uint32_t INTERVAL = 128;
+const uint16_t STRIDE_THERSHOLD = 32;
+const uint16_t POINTER_A_THERSHOLD = 32;
+const uint16_t INDIRECT_THERSHOLD = 32;
+const uint16_t PATTERN_THERSHOLD = 32;
+// const uint16_t CHAIN_THERSHOLD = 32;
 
 class TraceList {
   struct TraceNode {  // Single Memory Access
@@ -81,6 +83,8 @@ class TraceList {
         pc_value_candidate;
 
     // CHAIN
+    // std::unordered_map<unsigned long long int, int>
+    //     offset_candidate;  // offset, confidence
     std::set<unsigned long long int> offset_candidate;
     unsigned long long int offset;
 
@@ -104,11 +108,13 @@ class TraceList {
     PATTERN pattern;
     unsigned long long int count;
     bool confirm;
-    std::vector<int> inst_id_list;
+    long long pattern_confidence[PATTERN_NUM];
+    // std::vector<int> inst_id_list;
     PCmeta() {
       offset = lastaddr = lastpc = confirm = offset_stride = stride_confidence =
           0;
       pattern = PATTERN::OTHER;
+      for (int i = 0; i < PATTERN_NUM; i++) pattern_confidence[i] = 0;
       count = 1;
     }
     bool is_stride() { return stride_confidence >= STRIDE_THERSHOLD; }
