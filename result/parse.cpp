@@ -34,14 +34,16 @@ std::string int_to_hex(T i) {
 }
 
 // PATTERN constant variable
-const int PATTERN_NUM = 8;
-const std::string PATTERN_NAME[] = {"fresh",    "static",   "stride", "pointer",
-                                    "pointerB", "indirect", "chain",  "other"};
+const int PATTERN_NUM = 9;
+const std::string PATTERN_NAME[] = {
+    "fresh",         "static",   "stride", "pointer", "pointer_chase",
+    "pointer_array", "indirect", "chain",  "other"};
 enum PATTERN : uint16_t {
   FRESH,
   STATIC,
   STRIDE,
   pointer,
+  POINTER_A,
   POINTER_B,
   INDIRECT,
   CHAIN,
@@ -50,8 +52,9 @@ enum PATTERN : uint16_t {
 static std::unordered_map<std::string, PATTERN> const table = {
     {"fresh", PATTERN::FRESH},        {"static", PATTERN::STATIC},
     {"stride", PATTERN::STRIDE},      {"pointer", PATTERN::pointer},
-    {"pointerB", PATTERN::POINTER_B}, {"indirect", PATTERN::INDIRECT},
-    {"chain", PATTERN::CHAIN},        {"other", PATTERN::OTHER}};
+    {"pointerA", PATTERN::POINTER_A}, {"pointerB", PATTERN::POINTER_B},
+    {"indirect", PATTERN::INDIRECT},  {"chain", PATTERN::CHAIN},
+    {"other", PATTERN::OTHER}};
 template <typename E>
 constexpr auto to_underlying(E e) noexcept {
   return static_cast<std::underlying_type_t<E>>(e);
@@ -96,6 +99,7 @@ std::string pc2line(char bin_file[], unsigned long long pc) {
   assert(offset2 < len);
   for (offset3 = ++offset2; offset3 < len && isdigit(ret[offset3]); offset3++)
     ;
+  assert(offset3 <= len);
   std::string file_name = ret.substr(offset1, offset2 - offset1 - 1);
   std::string line_no = ret.substr(offset2, offset3 - offset2);
   if (file_name[0] == '?' || line_no.length() == 0) return "";
@@ -130,8 +134,8 @@ int main(int argc, char* argv[]) {
   in2.close();
   out.open(argv[3], std::ios::out);
   assert(out);
-  out << "PC" << sep << "Count" << sep << "Miss Count" << sep << "Pattern"
-      << std::endl;
+  // out << "PC" << sep << "Count" << sep << "Miss Count" << sep << "Pattern"
+  //     << std::endl;
   for (auto& meta : pc2meta) {
     auto ret = pc2line(argv[4], meta.first);
     out << std::hex << meta.first << sep << std::dec << meta.second.count << sep
