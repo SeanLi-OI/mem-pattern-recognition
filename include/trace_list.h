@@ -32,7 +32,7 @@ enum PATTERN : uint16_t {
   POINTER_B,
   INDIRECT,
   CHAIN,
-  OTHER
+  OTHER  // Grantee that PATTERN::OTHER is the last one
 };
 template <typename E>
 constexpr auto to_underlying(E e) noexcept {
@@ -46,8 +46,8 @@ inline unsigned long long int abs_sub(unsigned long long int a,
 
 const uint32_t INTERVAL = 128;
 const uint16_t STRIDE_THERSHOLD = 32;
-const uint16_t POINTER_A_THERSHOLD = 32;
-const uint16_t INDIRECT_THERSHOLD = 32;
+const uint16_t POINTER_A_THERSHOLD = 16;
+const uint16_t INDIRECT_THERSHOLD = 16;
 const uint16_t PATTERN_THERSHOLD = 32;
 // const uint16_t CHAIN_THERSHOLD = 32;
 
@@ -112,12 +112,16 @@ class TraceList {
     // std::vector<int> inst_id_list;
     PCmeta() {
       offset = lastaddr = lastpc = confirm = offset_stride = stride_confidence =
-          0;
+          pointerA_confidence = 0;
       pattern = PATTERN::OTHER;
       for (int i = 0; i < PATTERN_NUM; i++) pattern_confidence[i] = 0;
       count = 1;
     }
     bool is_stride() { return stride_confidence >= STRIDE_THERSHOLD; }
+    bool is_pointerA() {
+      return pattern_confidence[to_underlying(PATTERN::POINTER_A)] >=
+             POINTER_A_THERSHOLD;
+    }
   };
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
