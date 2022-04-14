@@ -453,13 +453,12 @@ static VOID recorder_w(ADDRINT ip, VOID *addr2, UINT32 len2) {
   rec_inst(ip, k);
 }
 
-const char* StripPath(const char* path)
-{
-    const char* file = strrchr(path, '/');
-    if (file)
-        return file + 1;
-    else
-        return path;
+const char *StripPath(const char *path) {
+  const char *file = strrchr(path, '/');
+  if (file)
+    return file + 1;
+  else
+    return path;
 }
 
 /* ===================================================================== */
@@ -598,12 +597,14 @@ int main(int argc, char *argv[]) {
   // Register function to be called when the application exits
   PIN_AddFiniFunction(Fini, 0);
 
-  // std::cerr <<  "===============================================" <<
-  // std::endl; std::cerr <<  "This application is instrumented by the Champsim
-  // Trace Generator" << std::endl; std::cerr <<  "Trace saved in " <<
-  // KnobOutputFile.Value() << std::endl; std::cerr <<
-  // "===============================================" << std::endl;
-
+  std::cerr << "===============================================" << std::endl;
+  std::cerr << "This application is instrumented by the MPR Trace Generator"
+            << std::endl;
+  std::cerr << "Trace saved in " << fileName << " and " << fileName2
+            << std::endl;
+  std::cerr << "Skip inst: " << KnobSkipInstructions << std::endl;
+  std::cerr << "Run inst:" << KnobTraceInstructions << std::endl;
+  std::cerr << "===============================================" << std::endl;
   // Start the program, never returns
   PIN_StartProgram();
 
