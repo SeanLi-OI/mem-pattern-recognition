@@ -5,11 +5,11 @@ Union tracer输出适合champsim和我们mpr工具的两份trace
 # 抓取trace
 binary_file= # 应用可执行文件
 app_input= # 应用输入文件
-champsim_trace_file= # 输出champsim的trace
+champsim_trace_file=# 输出champsim的trace
 mpr_trace_file= # 输出mpr的trace
 trace_len=300000000 # trace_len指pin抓的指令总数，并不是访存总数
-pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer.so -o ${champsim_trace_file}.tmp -m ${mpr_trace_file} -t ${trace_len} -- ${binary_file} <${app_input}
-gzip -c ${champsim_trace_file}.tmp > ${champsim_trace_file} # champsim只支持gz/xz压缩文件
+pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -- ${binary_file} <${app_input}
+gzip -c ${champsim_trace_file} > ${champsim_trace_file}.gz # champsim只支持gz/xz压缩文件
 ```
 
 通过mpr分析各PC的类别
