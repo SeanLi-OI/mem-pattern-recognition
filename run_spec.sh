@@ -4,7 +4,7 @@ trace_dir=/mnt/centos00-home/lixiang/trace
 result_dir=${mpr_dir}/result
 RUN_UNION_TRACE=false
 RUN_MPR=true
-RUN_CHAMPSIM=false
+RUN_CHAMPSIM=true
 RUN_PARSER=true
 
 app=$1

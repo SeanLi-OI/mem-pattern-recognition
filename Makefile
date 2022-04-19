@@ -12,7 +12,7 @@ DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     CPPFLAGS = -Iinclude/ -std=c++17 -DDEBUG -g -O0
 else
-    CPPFLAGS=  -Iinclude/ -std=c++17 -O3
+    CPPFLAGS=  -Iinclude/ -std=c++17 -O3 -march=native
 endif
 CFLAGS   :=
 LDFLAGS  :=

@@ -1,3 +1,17 @@
+# Demo
+
+以五种访存模式生成器为基础
+跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）最终输出统计信息
+这一整个pipeline
+```bash
+# 需要预先build champsim，并将champsim所在文件夹填写在run_app.sh中
+cd tracer
+./make_union_tracer.sh # build union_tracer
+cd ../result
+g++ -O3 -std=c++11 parse.cpp -o parse # build parse
+./run_apps.sh
+```
+
 # Quick Start
 
 Union tracer输出适合champsim和我们mpr工具的两份trace
@@ -47,6 +61,17 @@ mem-Pattern-Recognition/
 ├── README.md
 ├── result
 │   └── parse.cpp
+├── test-cases
+│   ├── chain
+│   │   └── chain.cpp
+│   ├── indirect
+│   │   └── indirect.cpp
+│   ├── pointera
+│   │   └── pointera.cpp
+│   ├── pointerb
+│   │   └── pointerb.cpp
+│   └── stride
+│       └── stride.cpp
 ├── src
 │   ├── main.cpp
 │   ├── trace_list.cpp
