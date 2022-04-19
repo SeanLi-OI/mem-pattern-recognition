@@ -17,6 +17,7 @@
 #include "pin.H"
 
 using std::map;
+using std::pair;
 using std::string;
 using std::vector;
 
@@ -71,6 +72,9 @@ bool trace_this;
 string func_name;
 string image;
 
+vector<std::pair<unsigned long long int, unsigned long long int> > roi_pc;
+unsigned long long int end_ip;
+
 trace_instr_format_t curr_instr;
 
 /* ===================================================================== */
@@ -92,6 +96,9 @@ KNOB<UINT64> KnobTraceInstructions(KNOB_MODE_WRITEONCE, "pintool", "t",
                                    "3000000000",
                                    "How many instructions to trace");
 
+KNOB<std::string> KnobROIFile(KNOB_MODE_WRITEONCE, "pintool", "r", "roi.txt",
+                              "specify file name for ROI file");
+
 /* ===================================================================== */
 // Utilities
 /* ===================================================================== */
@@ -104,6 +111,7 @@ INT32 Usage() {
       << "This tool creates a register and memory access trace" << std::endl
       << "Specify the champsim output trace file with -o" << std::endl
       << "Specify the mpr output trace file with -m" << std::endl
+      << "Specify the ROI input file with -r" << std::endl
       << "Specify the number of instructions to skip before tracing with -s"
       << std::endl
       << "Specify the number of instructions to trace with -t" << std::endl
@@ -119,18 +127,31 @@ INT32 Usage() {
 /* ===================================================================== */
 
 void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
-  instrCount++;
-  // printf("[%p %u %s ", ip, opcode, (char*)opstring);
-
-  if (instrCount > KnobSkipInstructions.Value()) {
-    tracing_on = true;
-
-    if (instrCount >
-        (KnobTraceInstructions.Value() + KnobSkipInstructions.Value()))
-      tracing_on = false;
+  if (tracing_on) {
+    if ((unsigned long long int)ip > end_ip) tracing_on = false;
   }
-
+  if (!tracing_on) {
+    for (auto &kv : roi_pc) {
+      if ((unsigned long long int)ip == kv.first) {
+        end_ip = kv.second;
+        tracing_on = true;
+      }
+    }
+  }
   if (!tracing_on) return;
+
+  instrCount++;
+  // printf("%llx\n",(unsigned long long int)ip);
+  // printf("[%p %u %s ", ip, op_code, (char*)opstring);
+
+  //   if (instrCount > KnobSkipInstructions.Value()) {
+  //     tracing_on = true;
+
+  //     if (instrCount >
+  //         (KnobTraceInstructions.Value() + KnobSkipInstructions.Value()))
+  //       tracing_on = false;
+  //   }
+
 
   // reset the current instruction
   curr_instr.ip = (unsigned long long int)ip;
@@ -592,6 +613,18 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  FILE *in = fopen(KnobROIFile.Value().c_str(), "r");
+  if (!in) {
+    std::cout << "Couldn't open ROI input file. Exiting." << std::endl;
+    exit(1);
+  }
+  unsigned long long int pc1, pc2;
+
+  while (fscanf(in, "%llx %llx", &pc1, &pc2) != EOF) {
+    roi_pc.emplace_back(std::make_pair(pc1, pc2));
+    std::cerr << pc1 << " " << pc2 << std::endl;
+  }
+
   // Register function to be called to instrument instructions
   INS_AddInstrumentFunction(Instruction, 0);
 
@@ -601,8 +634,9 @@ int main(int argc, char *argv[]) {
   std::cerr << "===============================================" << std::endl;
   std::cerr << "This application is instrumented by the MPR Trace Generator"
             << std::endl;
-  std::cerr << "Trace saved in " << fileName << " and " << fileName2
-            << std::endl;
+  std::cerr << "Read ROI point from " << KnobROIFile.Value().c_str() << std::endl;
+  std::cerr << "Trace saved in " << fileName << std::endl;
+  std::cerr << "           and " << fileName2 << std::endl;
   std::cerr << "Skip inst: " << KnobSkipInstructions << std::endl;
   std::cerr << "Run inst:" << KnobTraceInstructions << std::endl;
   std::cerr << "===============================================" << std::endl;
