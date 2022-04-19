@@ -1,7 +1,7 @@
 #include <stdlib.h>
 struct tree {
-  int val;
   struct tree* next;
+  int val;
 };
 int main() {
   int N = 10000, i, k;

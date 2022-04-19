@@ -9,7 +9,7 @@ void add_trace(TraceList &traceList, int &id, unsigned long long int ip,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
-  // fprintf(stderr, "%c %llu %llu %llu\n", isWrite ? 'W' : 'R',
+  // fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
   //         (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
 

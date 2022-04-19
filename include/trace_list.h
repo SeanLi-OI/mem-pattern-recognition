@@ -49,7 +49,8 @@ const uint16_t STRIDE_THERSHOLD = 32;
 const uint16_t POINTER_A_THERSHOLD = 16;
 const uint16_t INDIRECT_THERSHOLD = 16;
 const uint16_t PATTERN_THERSHOLD = 32;
-// const uint16_t CHAIN_THERSHOLD = 32;
+const uint16_t CHAIN_THERSHOLD = 32;
+const uint16_t STATIC_THERSHOLD = 16;
 
 class TraceList {
   struct TraceNode {  // Single Memory Access
@@ -83,17 +84,20 @@ class TraceList {
         pc_value_candidate;
 
     // CHAIN
+    std::unordered_map<unsigned long long int,
+                       std::pair<unsigned long long int, int>>
+        chain_candidate;  // PC -> <offset, condifence>
     // std::unordered_map<unsigned long long int, int>
     //     offset_candidate;  // offset, confidence
-    std::set<unsigned long long int> offset_candidate;
-    unsigned long long int offset;
+    // std::set<unsigned long long int> offset_candidate;
+    // unsigned long long int offset;
 
     // pointer
     std::set<unsigned long long int> lastpc_candidate;
     unsigned long long int lastpc;
 
     // pointerA
-    unsigned long long int pointerA_offset_candidate;
+    long long int pointerA_offset_candidate;
     unsigned long long int lastvalue;
     int pointerA_confidence;
 
@@ -111,17 +115,14 @@ class TraceList {
     long long pattern_confidence[PATTERN_NUM];
     // std::vector<int> inst_id_list;
     PCmeta() {
-      offset = lastaddr = lastpc = confirm = offset_stride = stride_confidence =
-          pointerA_confidence = 0;
+      lastaddr = lastpc = confirm = offset_stride = stride_confidence = 0;
+      pointerA_confidence = -1;
       pattern = PATTERN::OTHER;
       for (int i = 0; i < PATTERN_NUM; i++) pattern_confidence[i] = 0;
       count = 1;
     }
     bool is_stride() { return stride_confidence >= STRIDE_THERSHOLD; }
-    bool is_pointerA() {
-      return pattern_confidence[to_underlying(PATTERN::POINTER_A)] >=
-             POINTER_A_THERSHOLD;
-    }
+    bool is_pointerA() { return pattern == PATTERN::POINTER_A; }
   };
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;
   std::deque<TraceNode> traceHistory;
