@@ -79,6 +79,9 @@ std::unordered_map<unsigned long long, pcmeta> pc2meta;
 std::string get_file_line(const char file_name[], int line_no) {
   std::ifstream fin(file_name);
   std::string s;
+  if(!fin){
+    std::cerr<<file_name<<std::endl;
+  }
   assert(fin);
   line_no--;
   while (getline(fin, s) && line_no) line_no--;

@@ -128,13 +128,24 @@ INT32 Usage() {
 
 void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   if (tracing_on) {
-    if ((unsigned long long int)ip > end_ip) tracing_on = false;
+    // if ((unsigned long long int)ip > end_ip) tracing_on = false;
+    bool flag = true;
+    for (auto &kv : roi_pc) {
+      if ((unsigned long long int)ip >= kv.first &&
+          (unsigned long long int)ip <= kv.second) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) tracing_on = false;
   }
   if (!tracing_on) {
     for (auto &kv : roi_pc) {
-      if ((unsigned long long int)ip == kv.first) {
-        end_ip = kv.second;
+      if ((unsigned long long int)ip >= kv.first &&
+          (unsigned long long int)ip <= kv.second) {
+        // end_ip = kv.second;
         tracing_on = true;
+        break;
       }
     }
   }
@@ -151,7 +162,6 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   //         (KnobTraceInstructions.Value() + KnobSkipInstructions.Value()))
   //       tracing_on = false;
   //   }
-
 
   // reset the current instruction
   curr_instr.ip = (unsigned long long int)ip;
@@ -634,7 +644,8 @@ int main(int argc, char *argv[]) {
   std::cerr << "===============================================" << std::endl;
   std::cerr << "This application is instrumented by the MPR Trace Generator"
             << std::endl;
-  std::cerr << "Read ROI point from " << KnobROIFile.Value().c_str() << std::endl;
+  std::cerr << "Read ROI point from " << KnobROIFile.Value().c_str()
+            << std::endl;
   std::cerr << "Trace saved in " << fileName << std::endl;
   std::cerr << "           and " << fileName2 << std::endl;
   std::cerr << "Skip inst: " << KnobSkipInstructions << std::endl;
