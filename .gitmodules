@@ -1,3 +1,6 @@
 [submodule "external/gflags"]
 	path = external/gflags
 	url = https://github.com/gflags/gflags.git
+[submodule "external/ChampSim"]
+	path = external/ChampSim
+	url = https://github.com/SeanLi-OI/ChampSim.git
