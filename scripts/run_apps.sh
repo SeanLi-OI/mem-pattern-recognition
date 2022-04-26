@@ -1,6 +1,5 @@
 #!/bin/bash
-make clean
-make
+./build.sh
 
 apps=()
 apps+=("stride")

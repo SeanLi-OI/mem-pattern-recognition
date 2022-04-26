@@ -1,11 +1,13 @@
 # Demo
 
 以五种访存模式生成器为基础
-跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）最终输出统计信息
-这一整个pipeline
+跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）最终输出统计信息；这一整个pipeline
+（当然还有预测准确性这一功能，有需求可以参考Quick Start中的描述进行测试）
 ```bash
-# 需要预先build champsim，并将champsim所在文件夹填写在run_app.sh中
-cd tracer
+cd external/ChampSim
+./config.sh champsim_config.json
+make # build Champsim
+cd ../../tracer
 ./make_union_tracer.sh # build union_tracer
 ./run_apps.sh
 ```
