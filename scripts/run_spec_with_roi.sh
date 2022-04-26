@@ -44,7 +44,6 @@ fi
 # Get pattern from MPR
 stat_file=${result_dir}/${app}/${app}.stat
 pattern_file=${result_dir}/${app}/${app}.pattern
-result_file=$
 if [ "$RUN_MPR" = true ] ; then
     mkdir -p ${result_dir}/${app}
     ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file}.gz -stat=${stat_file} -pattern=${pattern_file} 2>${result_dir}/${app}/mpr_err.txt &
@@ -64,7 +63,7 @@ fi
 result_file=${result_dir}/${app}/${app}.res
 if [ "$RUN_VALIDATE" = true ] ; then
     mkdir -p ${result_dir}/${app}
-    ${mpr_dir}/build/mpr --validate -trace=${mpr_trace_file}.gz -pattern=${pattern_file} -result=${result_file} 2>>${result_dir}/${app}/mpr_err.txt &
+    ${mpr_dir}/build/mpr --validate -trace=${mpr_trace_file}.gz -pattern=${pattern_file} -result=${result_file} 2>${result_dir}/${app}/valid_err.txt &
 fi
 
 
