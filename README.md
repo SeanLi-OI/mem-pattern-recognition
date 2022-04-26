@@ -58,6 +58,7 @@ build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>err
 整个项目大概就这些，编译链接由CMake驱动
 ```
 mem-pattern-recognition/
+├── build.sh
 ├── CMakeLists.txt
 ├── external
 │   ├── ChampSim
@@ -71,7 +72,6 @@ mem-pattern-recognition/
 │   └── tracereader.h
 ├── README.md
 ├── scripts
-│   ├── build.sh
 │   ├── make_trace.sh
 │   ├── run_app.sh
 │   ├── run_apps.sh
