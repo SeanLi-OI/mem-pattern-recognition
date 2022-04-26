@@ -8,3 +8,4 @@ tracer/quick_make.sh
 test.*
 trace.v1(deprecated)/
 result/
+build/

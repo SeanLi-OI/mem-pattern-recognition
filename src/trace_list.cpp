@@ -1,3 +1,5 @@
+// Author: Lixiang
+
 #include "trace_list.h"
 
 void TraceList::erase_before(std::deque<TraceNode> &L,
@@ -64,11 +66,11 @@ bool TraceList::check_pointerA_pattern(
     unsigned long long int &addr) {
   if (it_meta->second.pointerA_offset_candidate == -1) {
     it_meta->second.pointerA_offset_candidate =
-        addr - it_meta->second.lastvalue;
+        abs_sub(addr, it_meta->second.lastvalue);
     it_meta->second.pointerA_confidence = 0;
   } else {
     if (it_meta->second.pointerA_offset_candidate ==
-        addr - it_meta->second.lastvalue) {
+        abs_sub(addr, it_meta->second.lastvalue)) {
       it_meta->second.pointerA_confidence++;
       if (it_meta->second.pointerA_confidence >= POINTER_A_THERSHOLD) {
         return true;
@@ -77,7 +79,8 @@ bool TraceList::check_pointerA_pattern(
       it_meta->second.pointerA_confidence--;
       if (it_meta->second.pointerA_confidence < 0) {
         it_meta->second.pointerA_offset_candidate =
-            addr - it_meta->second.lastvalue;
+            abs_sub(addr, it_meta->second.lastvalue);
+        fprintf(stderr, "%llx\n", it_meta->second.pointerA_offset_candidate);
         it_meta->second.pointerA_confidence = 0;
       }
     }
@@ -109,7 +112,8 @@ bool TraceList::check_indirect_pattern(
           unsigned long long int offset_now =
               abs_sub(addr, it->second.addr) /
               abs_sub(trace.value, it->second.value);
-          if (offset_now % 4 != 0) continue;
+          if (offset_now != 4 && offset_now != 8 && offset_now != 16) continue;
+          // if (offset_now % 4 != 0) continue;
           if (it->second.offset == 0) {
             it->second.offset = offset_now;
             it->second.confidence = 1;
@@ -150,8 +154,6 @@ bool TraceList::check_chain_pattern(
         it_meta->second.chain_candidate[trace.pc] =
             std::make_pair(abs_sub(trace.value, addr), 0);
       } else {
-        fprintf(stderr, "%llx %llx %llx %llx\n", trace.pc, it_meta->first,
-                it->second.first, abs_sub(trace.value, addr));
         if (it->second.first == abs_sub(trace.value, addr)) {
           it->second.second++;
           if (it->second.second >= CHAIN_THERSHOLD) {
@@ -222,14 +224,14 @@ void TraceList::add_trace(unsigned long long int pc,
         }
         if (check_pointerA_pattern(it_meta, addr)) {
           it_meta->second.pattern = PATTERN::POINTER_A;
-          // it_meta->second.confirm = true;
-          // break;
-        }
-        if (check_chain_pattern(it_meta, addr)) {
-          it_meta->second.pattern = PATTERN::CHAIN;
           it_meta->second.confirm = true;
           break;
         }
+        // if (check_chain_pattern(it_meta, addr)) {
+        //   it_meta->second.pattern = PATTERN::CHAIN;
+        //   it_meta->second.confirm = true;
+        //   break;
+        // }
         if (check_indirect_pattern(it_meta, addr)) {
           it_meta->second.pattern = PATTERN::INDIRECT;
           it_meta->second.confirm = true;
@@ -264,7 +266,7 @@ void TraceList::add_trace(unsigned long long int pc,
   }
 }
 
-void TraceList::printStats(int totalCnt, char *filename) {
+void TraceList::printStats(int totalCnt, const char filename[]) {
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
   for (auto &meta : pc2meta) {
@@ -292,9 +294,8 @@ void TraceList::printStats(int totalCnt, char *filename) {
   }
   if (out) {
     for (auto &meta : pc2meta) {
-      out << std::hex << meta.first << " "
-          << PATTERN_NAME[to_underlying(meta.second.pattern)] << " " << std::dec
-          << meta.second.count << std::endl;
+      out << std::hex << meta.first << " ";
+      meta.second.output(out);
     }
     out.close();
   }

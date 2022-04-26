@@ -1,3 +1,5 @@
+// Author: Lixiang
+
 #include "tracereader.h"
 
 #include <sys/stat.h>

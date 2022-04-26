@@ -1,3 +1,5 @@
+// Author: Lixiang
+
 #include <assert.h>
 
 #include <fstream>
@@ -8,6 +10,8 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+
+#include "pc_meta.h"
 
 const std::string sep = "\t";
 
@@ -33,54 +37,13 @@ std::string int_to_hex(T i) {
   return stream.str();
 }
 
-// PATTERN constant variable
-const int PATTERN_NUM = 9;
-const std::string PATTERN_NAME[] = {
-    "fresh",         "static",   "stride", "pointer", "pointer_chase",
-    "pointer_array", "indirect", "chain",  "other"};
-enum PATTERN : uint16_t {
-  FRESH,
-  STATIC,
-  STRIDE,
-  pointer,
-  POINTER_A,
-  POINTER_B,
-  INDIRECT,
-  CHAIN,
-  OTHER
-};
-static std::unordered_map<std::string, PATTERN> const table = {
-    {"fresh", PATTERN::FRESH},        {"static", PATTERN::STATIC},
-    {"stride", PATTERN::STRIDE},      {"pointer", PATTERN::pointer},
-    {"pointerA", PATTERN::POINTER_A}, {"pointerB", PATTERN::POINTER_B},
-    {"indirect", PATTERN::INDIRECT},  {"chain", PATTERN::CHAIN},
-    {"other", PATTERN::OTHER}};
-template <typename E>
-constexpr auto to_underlying(E e) noexcept {
-  return static_cast<std::underlying_type_t<E>>(e);
-}
-
-// PC Metadata
-struct pcmeta {
-  PATTERN pattern;
-  int count;
-  int miss_count;
-  pcmeta() {}
-  pcmeta(std::string str, int cnt) {
-    auto it = table.find(str);
-    assert(it != table.end());
-    pattern = table.find(str)->second;
-    count = cnt;
-    miss_count = 0;
-  }
-};
-std::unordered_map<unsigned long long, pcmeta> pc2meta;
+std::unordered_map<unsigned long long, std::pair<PCmeta, unsigned>> pc2meta;
 
 std::string get_file_line(const char file_name[], int line_no) {
   std::ifstream fin(file_name);
   std::string s;
-  if(!fin){
-    std::cerr<<file_name<<std::endl;
+  if (!fin) {
+    std::cerr << file_name << std::endl;
   }
   assert(fin);
   line_no--;
@@ -110,18 +73,20 @@ std::string pc2line(char bin_file[], unsigned long long pc) {
 }
 
 int main(int argc, char* argv[]) {
-  std::fstream in1, in2, out;
+  std::ifstream in1, in2;
+  std::ofstream out;
   assert(argc > 4);
-  in1.open(argv[1], std::ios::in);
+  in1.open(argv[1]);
   assert(in1);
-  in2.open(argv[2], std::ios::in);
+  in2.open(argv[2]);
   assert(in2);
 
   unsigned long long pc, addr;
   std::string pattern;
   int count, instr_id;
-  while (in2 >> std::hex >> pc >> pattern >> std::dec >> count) {
-    pc2meta[pc] = pcmeta(pattern, count);
+  while (in2 >> std::hex >> pc) {
+    pc2meta[pc] = std::make_pair(PCmeta(), 0);
+    pc2meta[pc].first.input(in2);
   }
   while (in1 >> std::dec >> instr_id >> std::hex >> pc >> std::hex >> addr) {
     auto it = pc2meta.find(pc);
@@ -131,7 +96,7 @@ int main(int argc, char* argv[]) {
       continue;
     }
     assert(it != pc2meta.end());
-    it->second.miss_count++;
+    it->second.second++;
   }
   in1.close();
   in2.close();
@@ -141,9 +106,9 @@ int main(int argc, char* argv[]) {
   //     << std::endl;
   for (auto& meta : pc2meta) {
     auto ret = pc2line(argv[4], meta.first);
-    out << std::hex << meta.first << sep << std::dec << meta.second.count << sep
-        << std::dec << meta.second.miss_count << sep
-        << PATTERN_NAME[to_underlying(meta.second.pattern)] << sep << ret
+    out << std::hex << meta.first << sep << std::dec << meta.second.first.count
+        << sep << std::dec << meta.second.second << sep
+        << PATTERN_NAME[to_underlying(meta.second.first.pattern)] << sep << ret
         << std::endl;
   }
   return 0;
