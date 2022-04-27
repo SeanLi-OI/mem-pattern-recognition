@@ -7,6 +7,7 @@ result_dir=${mpr_dir}/result
 RUN_UNION_TRACE=false
 RUN_MPR=true
 RUN_CHAMPSIM=false
+RUN_VALIDATE=true
 RUN_PARSER=true
 
 
@@ -53,9 +54,16 @@ fi
 wait
 echo "Analyze $app done."
 
-if [ "$RUN_PARSER" = true ] ; then
-    out_file=${result_dir}/${app}/${app}.csv
-    ${mpr_dir}/build/parse ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt
+result_file=${result_dir}/${app}/${app}.res
+if [ "$RUN_VALIDATE" = true ] ; then
+    mkdir -p ${result_dir}/${app}
+    ${mpr_dir}/build/mpr --validate -trace=${mpr_trace_file} -pattern=${pattern_file} -result=${result_file} 2>${result_dir}/${app}/valid_err.txt &
 fi
 
+if [ "$RUN_PARSER" = true ] ; then
+    out_file=${result_dir}/${app}/${app}.csv
+    ${mpr_dir}/build/parse ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt &
+fi
+
+wait
 echo "Run $app done."

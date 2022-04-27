@@ -9,7 +9,8 @@ cd external/ChampSim
 make # build Champsim
 cd ../../tracer
 ./make_union_tracer.sh # build union_tracer
-./run_apps.sh
+cd ../
+./scripts/run_apps.sh
 ```
 
 # Quick Start

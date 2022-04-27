@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ..
 ./build.sh
 
 apps=()
