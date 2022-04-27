@@ -23,6 +23,7 @@ class PCmeta {  // Metadata for each PC
     }
   };
   std::unordered_map<unsigned long long int, pc_value_meta> pc_value_candidate;
+  pc_value_meta pc_value; //value(PC), addr(base_addr), offset(offset)
 
   // CHAIN
   std::unordered_map<unsigned long long int,
@@ -34,7 +35,7 @@ class PCmeta {  // Metadata for each PC
   unsigned long long int lastpc;
 
   // pointerA
-  long long int pointerA_offset_candidate;
+  unsigned long long int pointerA_offset_candidate;
   unsigned long long int lastvalue;
   int pointerA_confidence;
 

@@ -22,11 +22,6 @@
 #include <chrono>
 #endif
 
-inline unsigned long long int abs_sub(unsigned long long int a,
-                                      unsigned long long int b) {
-  return a > b ? a - b : b - a;
-}
-
 class TraceList {
   struct TraceNode {  // Single Memory Access
     unsigned long long int id;

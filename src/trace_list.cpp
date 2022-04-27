@@ -2,6 +2,11 @@
 
 #include "trace_list.h"
 
+inline unsigned long long int abs_sub(unsigned long long int a,
+                                      unsigned long long int b) {
+  return a > b ? a - b : b - a;
+}
+
 void TraceList::erase_before(std::deque<TraceNode> &L,
                              const unsigned long long int &id) {
 #ifndef DEBUG_ALL
@@ -64,10 +69,11 @@ bool TraceList::check_pointer_pattern(
 bool TraceList::check_pointerA_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
+  if (abs_sub(addr, it_meta->second.lastvalue) > 65536) return false;
   if (it_meta->second.pointerA_offset_candidate == -1) {
     it_meta->second.pointerA_offset_candidate =
         abs_sub(addr, it_meta->second.lastvalue);
-    it_meta->second.pointerA_confidence = 0;
+    it_meta->second.pointerA_confidence = -5;
   } else {
     if (it_meta->second.pointerA_offset_candidate ==
         abs_sub(addr, it_meta->second.lastvalue)) {
@@ -80,8 +86,8 @@ bool TraceList::check_pointerA_pattern(
       if (it_meta->second.pointerA_confidence < 0) {
         it_meta->second.pointerA_offset_candidate =
             abs_sub(addr, it_meta->second.lastvalue);
-        fprintf(stderr, "%llx\n", it_meta->second.pointerA_offset_candidate);
-        it_meta->second.pointerA_confidence = 0;
+        // fprintf(stderr, "%llx\n", it_meta->second.pointerA_offset_candidate);
+        it_meta->second.pointerA_confidence = -5;
       }
     }
   }
@@ -104,14 +110,14 @@ bool TraceList::check_indirect_pattern(
     if (trace.pc == it_meta->first) break;  // find loop
     if (pc2meta[trace.pc].is_stride()) {
       auto it = it_meta->second.pc_value_candidate.find(trace.pc);
+      unsigned long long int offset_now;
       if (it != it_meta->second.pc_value_candidate.end()) {
         if (addr != it->second.addr && trace.value != it->second.value &&
             abs_sub(addr, it->second.addr) %
                     abs_sub(trace.value, it->second.value) ==
                 0) {
-          unsigned long long int offset_now =
-              abs_sub(addr, it->second.addr) /
-              abs_sub(trace.value, it->second.value);
+          offset_now = abs_sub(addr, it->second.addr) /
+                       abs_sub(trace.value, it->second.value);
           if (offset_now != 4 && offset_now != 8 && offset_now != 16) continue;
           // if (offset_now % 4 != 0) continue;
           if (it->second.offset == 0) {
@@ -128,6 +134,9 @@ bool TraceList::check_indirect_pattern(
           }
         }
         if (it->second.confidence >= INDIRECT_THERSHOLD) {
+          it_meta->second.pc_value =
+              PCmeta::pc_value_meta(trace.pc, addr - trace.value * offset_now);
+          it_meta->second.pc_value.offset = offset_now;
           it_meta->second.pc_value_candidate.clear();
           return true;
         }
