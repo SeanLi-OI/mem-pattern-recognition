@@ -1,5 +1,4 @@
 #!/bin/bash
-cd ..
 ./build.sh
 
 apps=()
@@ -13,8 +12,7 @@ bench_dir=/home/lixiang/mem-pattern-recognition/test-cases
 
 for app in "${apps[@]}"
 do
-
-    ./run_app.sh ${app} >${bench_dir}/${app}/${app}.log &
+    ./scripts/run_app.sh ${app} >${bench_dir}/${app}/${app}.log &
 done
 wait
 

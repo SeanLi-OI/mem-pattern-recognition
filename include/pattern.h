@@ -4,9 +4,9 @@
 #include <string>
 
 const int PATTERN_NUM = 9;
-const std::string PATTERN_NAME[] = {"fresh\t",  "static\t", "stride\t",
-                                    "pointer",  "pointerA", "pointerB",
-                                    "indirect", "chain\t",  "other\t"};
+const std::string PATTERN_NAME[] = {
+    "fresh\t\t",     "static\t\t", "stride\t\t", "pointer\t\t", "pointer_chase",
+    "pointer_array", "indirect\t", "chain\t\t",  "other\t\t"};
 enum PATTERN : uint16_t {
   FRESH,
   STATIC,
@@ -16,14 +16,18 @@ enum PATTERN : uint16_t {
   POINTER_B,
   INDIRECT,
   CHAIN,
-  OTHER  // Grantee that PATTERN::OTHER is the last one
+  OTHER
 };
 
 static std::unordered_map<std::string, PATTERN> const pattern_table = {
-    {"fresh", PATTERN::FRESH},        {"static", PATTERN::STATIC},
-    {"stride", PATTERN::STRIDE},      {"pointer", PATTERN::pointer},
-    {"pointerA", PATTERN::POINTER_A}, {"pointerB", PATTERN::POINTER_B},
-    {"indirect", PATTERN::INDIRECT},  {"chain", PATTERN::CHAIN},
+    {"fresh", PATTERN::FRESH},
+    {"static", PATTERN::STATIC},
+    {"stride", PATTERN::STRIDE},
+    {"pointer", PATTERN::pointer},
+    {"pointer_chase", PATTERN::POINTER_A},
+    {"pointer_array", PATTERN::POINTER_B},
+    {"indirect", PATTERN::INDIRECT},
+    {"chain", PATTERN::CHAIN},
     {"other", PATTERN::OTHER}};
 
 template <typename E>

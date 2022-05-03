@@ -47,10 +47,10 @@ int main(int argc, char* argv[]) {
   std::vector<std::pair<unsigned long long, PC_block>> elems(pc_cnt.begin(),
                                                              pc_cnt.end());
   std::sort(elems.begin(), elems.end(), comp);
-  for (auto& kv : elems) {
-    output << "0x" << std::hex << kv.first << " 0x" << std::hex
-           << kv.first + kv.second.max_offset << " " << std::dec
-           << kv.second.counter << std::endl;
+  for (auto& [pc, block] : elems) {
+    output << "0x" << std::hex << pc << " 0x" << std::hex
+           << pc + block.max_offset << " " << std::dec << block.counter
+           << std::endl;
   }
   return 0;
 }

@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
   unsigned long long pc, addr;
   std::string pattern;
-  int count, instr_id;
+  int instr_id;
   while (in2 >> std::hex >> pc) {
     pc2meta[pc] = std::make_pair(PCmeta(), 0);
     pc2meta[pc].first.input(in2);
@@ -104,11 +104,11 @@ int main(int argc, char* argv[]) {
   assert(out);
   // out << "PC" << sep << "Count" << sep << "Miss Count" << sep << "Pattern"
   //     << std::endl;
-  for (auto& meta : pc2meta) {
-    auto ret = pc2line(argv[4], meta.first);
-    out << std::hex << meta.first << sep << std::dec << meta.second.first.count
-        << sep << std::dec << meta.second.second << sep
-        << PATTERN_NAME[to_underlying(meta.second.first.pattern)] << sep << ret
+  for (auto& [pc, meta] : pc2meta) {
+    auto ret = pc2line(argv[4], pc);
+    out << std::hex << pc << sep << std::dec << meta.first.count << sep
+        << std::dec << meta.second << sep
+        << PATTERN_NAME[to_underlying(meta.first.pattern)] << sep << ret
         << std::endl;
   }
   return 0;

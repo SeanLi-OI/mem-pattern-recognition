@@ -13,7 +13,7 @@ class PCmeta {  // Metadata for each PC
   struct pc_value_meta {
     unsigned long long int value;
     unsigned long long int addr;
-    int offset;
+    long long offset;
     int confidence;
     pc_value_meta() {}
     pc_value_meta(unsigned long long int _v, unsigned long long int _a)
@@ -23,11 +23,10 @@ class PCmeta {  // Metadata for each PC
     }
   };
   std::unordered_map<unsigned long long int, pc_value_meta> pc_value_candidate;
-  pc_value_meta pc_value; //value(PC), addr(base_addr), offset(offset)
+  pc_value_meta pc_value;  // value(PC), addr(base_addr), offset(offset)
 
   // CHAIN
-  std::unordered_map<unsigned long long int,
-                     std::pair<unsigned long long int, int>>
+  std::unordered_map<unsigned long long int, std::pair<long long int, int>>
       chain_candidate;  // PC -> <offset, condifence>
 
   // pointer
@@ -35,15 +34,16 @@ class PCmeta {  // Metadata for each PC
   unsigned long long int lastpc;
 
   // pointerA
-  unsigned long long int pointerA_offset_candidate;
+  long long int pointerA_offset_candidate;
   unsigned long long int lastvalue;
   int pointerA_confidence;
 
   // STATIC & STRIDE
   unsigned long long int lastaddr;
+  unsigned long long int lastaddr_2;
 
   // STRIDE
-  unsigned long long int offset_stride;
+  long long int offset_stride;
   int stride_confidence;
 
   // common
@@ -53,8 +53,13 @@ class PCmeta {  // Metadata for each PC
   long long pattern_confidence[PATTERN_NUM];
   // std::vector<int> inst_id_list;
   PCmeta() {
-    lastaddr = lastpc = confirm = offset_stride = stride_confidence = 0;
-    pointerA_confidence = -1;
+    lastaddr = 0;
+    lastaddr_2 = 0;
+    lastpc = 0;
+    confirm = 0;
+    offset_stride = 0;
+    stride_confidence = 0;
+    pointerA_offset_candidate = -1;
     pattern = PATTERN::OTHER;
     for (int i = 0; i < PATTERN_NUM; i++) pattern_confidence[i] = 0;
     count = 1;

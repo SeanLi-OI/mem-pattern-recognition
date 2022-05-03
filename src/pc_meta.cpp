@@ -18,6 +18,9 @@ void PCmeta::input(std::ifstream &in) {
     pattern = it->second;
   }
   switch (pattern) {
+    case PATTERN::STATIC:
+      in >> std::hex >> lastaddr >> std::hex >> lastaddr_2;
+      break;
     case PATTERN::POINTER_A:
       in >> pointerA_offset_candidate;
       break;
@@ -30,12 +33,19 @@ void PCmeta::input(std::ifstream &in) {
     case PATTERN::INDIRECT:
       in >> std::hex >> pc_value.value >> std::hex >> pc_value.addr >>
           std::dec >> pc_value.offset;
+      break;
+    default:
+      break;
   }
 }
 
 void PCmeta::output(std::ofstream &out) {
   out << PATTERN_NAME[to_underlying(pattern)] << " " << std::dec << count;
   switch (pattern) {
+    case PATTERN::STATIC:
+      out << " " << std::hex << lastaddr << " " << std::hex << lastaddr_2
+          << std::endl;
+      break;
     case PATTERN::POINTER_A:
       out << " " << pointerA_offset_candidate << std::endl;
       break;
@@ -48,6 +58,7 @@ void PCmeta::output(std::ofstream &out) {
     case PATTERN::INDIRECT:
       out << " " << std::hex << pc_value.value << " " << std::hex
           << pc_value.addr << " " << std::dec << pc_value.offset << std::endl;
+      break;
     default:
       out << std::endl;
   }

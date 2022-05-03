@@ -24,11 +24,11 @@
 
 class TraceList {
   struct TraceNode {  // Single Memory Access
-    unsigned long long int id;
     unsigned long long int pc;
     unsigned long long int addr;
     unsigned long long int value;
     bool isWrite;
+    unsigned long long int id;
     TraceNode() {}
     TraceNode(unsigned long long int _p, unsigned long long int _a,
               unsigned long long int _v, bool _i, unsigned long long int _id)
@@ -51,21 +51,19 @@ class TraceList {
 
   bool check_static_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &pc, unsigned long long int &addr);
+      unsigned long long int &addr);
   bool check_stride_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &pc, unsigned long long int &addr);
+      unsigned long long int &addr);
   bool check_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       std::unordered_map<unsigned long long int,
-                         std::deque<TraceNode>>::iterator &it_val,
-      unsigned long long int &addr);
+                         std::deque<TraceNode>>::iterator &it_val);
   bool check_pointerA_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
   bool check_pointerB_pattern(
-      std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &addr);
+      std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta);
   bool check_indirect_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
@@ -87,7 +85,7 @@ class TraceList {
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
                  unsigned long long int id, const int inst_id);
-  void printStats(int totalCnt, const char filename[]);
+  void printStats(unsigned long long totalCnt, const char filename[]);
 };
 
 #endif

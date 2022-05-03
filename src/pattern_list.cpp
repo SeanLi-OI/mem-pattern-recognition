@@ -3,6 +3,7 @@
 #include "pattern_list.h"
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 PatternList::PatternList(const char filename[]) {
@@ -45,34 +46,54 @@ void PatternList::add_trace(unsigned long long int pc,
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:
-      next_addr[pc] = addr;
+      if (addr == it_meta->second.lastaddr)
+        next_addr[pc] = it_meta->second.lastaddr_2;
+      else
+        next_addr[pc] = it_meta->second.lastaddr;
       break;
     case PATTERN::STRIDE:
-      if (it_meta->second.lastaddr != 0)
+      if (it_meta->second.lastaddr != 0) {
         if (addr > it_meta->second.lastaddr) {
           next_addr[pc] = addr + addr - it_meta->second.lastaddr;
         } else {
           next_addr[pc] = addr - (it_meta->second.lastaddr - addr);
         }
+      }
       break;
     case PATTERN::POINTER_A:
       next_addr[pc] = value + it_meta->second.pointerA_offset_candidate;
+      break;
+    default:
       break;
   }
   it_meta->second.lastaddr = addr;
   it_meta->second.lastvalue = value;
 }
-void PatternList::printStats(int totalCnt, const char filename[]) {
+
+#define PERCENT(CNT, TOTAL) \
+  "  (" << std::setprecision(4) << (CNT) * (double)100.0 / (TOTAL) << "%)"
+
+#define MY_ALIGN(n) std::left << std::setw(12) << (n)
+
+void PatternList::printStats(unsigned long long totalCnt,
+                             const char filename[]) {
   std::ofstream out(filename);
-  int hit_sum = 0, total_sum = 0;
-  out << "Hit\tPredict\tTotal" << std::endl;
+  unsigned long long hit_sum = 0, total_sum = 0;
+  out << "=================================================" << std::endl;
+  out << "                Hit         Predict     Total" << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
-    out << PATTERN_NAME[i] << "\t" << hit_count[i] << "\t" << total_count[i]
-        << "\t" << all_count[i] << std::endl;
+    out << PATTERN_NAME[i] << "\t" << MY_ALIGN(hit_count[i])
+        << MY_ALIGN(total_count[i]) << MY_ALIGN(all_count[i])
+        << PERCENT(hit_count[i], total_count[i]) << std::endl;
     hit_sum += hit_count[i];
     total_sum += total_count[i];
   }
-  out << "Fresh : " << totalCnt - total_sum << std::endl;
-  out << "Hit   : " << hit_sum << std::endl;
-  out << "Miss  : " << total_sum - hit_sum << std::endl;
+  out << "=================================================" << std::endl;
+  out << "Fresh : " << MY_ALIGN(totalCnt - total_sum)
+      << PERCENT(totalCnt - total_sum, totalCnt) << std::endl;
+  out << "Hit   : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, totalCnt)
+      << std::endl;
+  out << "Miss  : " << MY_ALIGN(total_sum - hit_sum)
+      << PERCENT(total_sum - hit_sum, totalCnt) << std::endl;
+  out << "=================================================" << std::endl;
 }
