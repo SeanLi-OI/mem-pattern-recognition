@@ -42,6 +42,7 @@ stat_file=${result_dir}/${app}/${app}.stat
 pattern_file=${result_dir}/${app}/${app}.pattern
 if [ "$RUN_MPR" = true ] ; then
     mkdir -p ${result_dir}/${app}
+    echo ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} 2>${result_dir}/${app}/mpr_err.txt
     ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} 2>${result_dir}/${app}/mpr_err.txt &
 fi
 
@@ -62,7 +63,7 @@ fi
 
 if [ "$RUN_PARSER" = true ] ; then
     out_file=${result_dir}/${app}/${app}.csv
-    ${mpr_dir}/build/parse ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt &
+    ${mpr_dir}/build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt &
 fi
 
 wait

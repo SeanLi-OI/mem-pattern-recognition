@@ -21,7 +21,7 @@ PatternList::PatternList(const char filename[]) {
 void PatternList::add_trace(unsigned long long int pc,
                             unsigned long long int addr,
                             unsigned long long int value, bool isWrite,
-                            unsigned long long int id, const int inst_id) {
+                            unsigned long long int &id, const int inst_id) {
   auto it_meta = pc2meta.find(pc);
   if (it_meta == pc2meta.end()) {
     std::cerr << "Cannot find PC " << pc << " in pattern list." << std::endl;
@@ -46,10 +46,10 @@ void PatternList::add_trace(unsigned long long int pc,
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:
-      if (addr == it_meta->second.lastaddr)
-        next_addr[pc] = it_meta->second.lastaddr_2;
-      else
-        next_addr[pc] = it_meta->second.lastaddr;
+      // if (addr == it_meta->second.lastaddr)
+      //   next_addr[pc] = it_meta->second.lastaddr_2;
+      // else
+      next_addr[pc] = it_meta->second.lastaddr;
       break;
     case PATTERN::STRIDE:
       if (it_meta->second.lastaddr != 0) {
@@ -61,6 +61,8 @@ void PatternList::add_trace(unsigned long long int pc,
       }
       break;
     case PATTERN::POINTER_A:
+      std::cerr << std::hex << pc << " " << std::hex << value << " " << std::dec
+                << it_meta->second.pointerA_offset_candidate << std::endl;
       next_addr[pc] = value + it_meta->second.pointerA_offset_candidate;
       break;
     default:
@@ -70,8 +72,9 @@ void PatternList::add_trace(unsigned long long int pc,
   it_meta->second.lastvalue = value;
 }
 
-#define PERCENT(CNT, TOTAL) \
-  "  (" << std::setprecision(4) << (CNT) * (double)100.0 / (TOTAL) << "%)"
+#define PERCENT(CNT, TOTAL)     \
+  "  (" << std::setprecision(4) \
+        << (((TOTAL) == 0) ? 0 : ((CNT) * (double)100.0 / (TOTAL))) << "%)"
 
 #define MY_ALIGN(n) std::left << std::setw(12) << (n)
 

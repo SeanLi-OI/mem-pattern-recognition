@@ -5,7 +5,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/gflags)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-error=maybe-uninitialized -Wno-error=unused-parameter -Wno-error=switch -w -O3 -std=c++17 -march=native)
+add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-error=maybe-uninitialized -Wno-error=unused-parameter -Wno-error=switch -w -g -O3 -std=c++17 -march=native)
 
 add_executable(mpr
     ${PROJECT_SOURCE_DIR}/src/main.cpp
@@ -16,8 +16,8 @@ add_executable(mpr
 )
 target_link_libraries(mpr gflags::gflags)
 
-add_executable(pattren2line
-    ${PROJECT_SOURCE_DIR}/src/utils/pattren2line.cpp
+add_executable(pattern2line
+    ${PROJECT_SOURCE_DIR}/src/utils/pattern2line.cpp
     ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
 )
 

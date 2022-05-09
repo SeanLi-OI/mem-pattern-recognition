@@ -19,7 +19,7 @@ class PatternList {
   PatternList(const char filename[]);
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
-                 unsigned long long int id, const int inst_id);
+                 unsigned long long int &id, const int inst_id);
   void printStats(unsigned long long totalCnt, const char filename[]);
 };
 

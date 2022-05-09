@@ -20,24 +20,29 @@ void TraceList::add_next(std::deque<TraceNode> &L, TraceNode tn) {
 bool TraceList::check_static_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  if (it_meta->second.lastaddr == addr || it_meta->second.lastaddr_2 == addr)
+  if (!it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)] &&
+      it_meta->second.lastaddr == addr) {
+    it_meta->second.maybe_pattern[to_underlying(PATTERN::STATIC)] = true;
     return true;
-  return false;
+  } else {
+    it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)] = true;
+    return false;
+  }
 }
 
 bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  auto offset = abs_sub(it_meta->second.lastaddr, addr);
+  if (it_meta->second.lastaddr == 0) return false;
+  long long int offset = abs_sub(it_meta->second.lastaddr, addr);
   if (it_meta->second.offset_stride != 0) {
     if (offset == it_meta->second.offset_stride) {
-      it_meta->second.stride_confidence++;
+      it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] = true;
     } else {
-      it_meta->second.stride_confidence--;
-      if (it_meta->second.stride_confidence == 0)
-        it_meta->second.offset_stride = offset;
+      if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] ==
+          false)
+        it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
     }
-    if (it_meta->second.is_stride()) return true;
   } else {
     it_meta->second.offset_stride = offset;
   }
@@ -48,19 +53,30 @@ bool TraceList::check_pointer_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     std::unordered_map<unsigned long long int, std::deque<TraceNode>>::iterator
         &it_val) {
-  if (it_meta->second.lastpc != 0) return true;
+  // if (it_meta->second.lastpc != 0) return true;
+  if (it_meta->second.is_not_pattern[PATTERN::pointer]) return false;
   if (it_meta->second.lastpc_candidate.empty()) {
     for (auto it = it_val->second.rbegin(); it != it_val->second.rend(); it++) {
       it_meta->second.lastpc_candidate.insert(it->pc);
     }
+    it_meta->second.maybe_pattern[PATTERN::pointer] = true;
   } else {
+    std::set<unsigned long long int> tmp;
     for (auto it = it_val->second.rbegin(); it != it_val->second.rend(); it++) {
       if (it_meta->second.lastpc_candidate.find(it->pc) !=
           it_meta->second.lastpc_candidate.end()) {
-        it_meta->second.lastpc_candidate.clear();
-        it_meta->second.lastpc = it->pc;
-        return true;
+        // it_meta->second.lastpc_candidate.clear();
+        tmp.insert(it->pc);
+        // it_meta->second.lastpc = it->pc;
+        // return true;
       }
+    }
+    it_meta->second.lastpc_candidate = tmp;
+    if (tmp.empty()) {
+      it_meta->second.is_not_pattern[PATTERN::pointer] = true;
+    } else {
+      it_meta->second.lastpc = *tmp.begin();
+      return true;
     }
   }
   return false;
@@ -70,25 +86,17 @@ bool TraceList::check_pointerA_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   long long offset_now = (long long)addr - (long long)it_meta->second.lastvalue;
-  if (offset_now > 65536) return false;
-  if (addr == it_meta->second.lastaddr || addr == it_meta->second.lastaddr_2)
-    return false;
+  if (addr == it_meta->second.lastaddr) return false;
   if (it_meta->second.pointerA_offset_candidate == -1) {
     it_meta->second.pointerA_offset_candidate = offset_now;
-    it_meta->second.pointerA_confidence = 0;
   } else {
     if (it_meta->second.pointerA_offset_candidate == offset_now) {
-      it_meta->second.pointerA_confidence++;
-      if (it_meta->second.pointerA_confidence >= POINTER_A_THERSHOLD) {
-        return true;
-      }
+      it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
     } else {
-      it_meta->second.pointerA_confidence--;
-      if (it_meta->second.pointerA_confidence < 0) {
-        it_meta->second.pointerA_offset_candidate = offset_now;
-        // fprintf(stderr, "%llx\n", it_meta->second.pointerA_offset_candidate);
-        it_meta->second.pointerA_confidence = 0;
-      }
+      if (it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] ==
+          true)
+        it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
+            true;
     }
   }
   return false;
@@ -96,7 +104,7 @@ bool TraceList::check_pointerA_pattern(
 
 bool TraceList::check_pointerB_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta) {
-  if (pc2meta[it_meta->second.lastpc].is_stride()) return true;
+  if (pc2meta[it_meta->second.lastpc].is_pattern(PATTERN::STRIDE)) return true;
   return false;
 }
 
@@ -104,50 +112,74 @@ bool TraceList::check_indirect_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   if (addr == it_meta->second.lastaddr) return false;
-  if (it_meta->second.is_stride()) return false;
+  if (it_meta->second.is_pattern(PATTERN::STRIDE)) return false;
+  if (it_meta->second.is_not_pattern[to_underlying(PATTERN::INDIRECT)])
+    return false;
+  std::unordered_map<unsigned long long int, PCmeta::pc_value_meta> tmp;
   for (auto it_trace = traceHistory.rbegin(); it_trace != traceHistory.rend();
        it_trace++) {
     auto &trace = *it_trace;
     if (trace.pc == it_meta->first) break;  // find loop
-    if (pc2meta[trace.pc].is_stride()) {
+    if (pc2meta[trace.pc].is_pattern(PATTERN::STRIDE)) {
       auto it = it_meta->second.pc_value_candidate.find(trace.pc);
       long long offset_now;
-      if (it != it_meta->second.pc_value_candidate.end()) {
-        if (addr != it->second.addr && trace.value != it->second.value &&
-            abs_sub(addr, it->second.addr) %
-                    abs_sub(trace.value, it->second.value) ==
-                0) {
-          offset_now = abs_sub(addr, it->second.addr) /
-                       abs_sub(trace.value, it->second.value);
-          if (offset_now != 4 && offset_now != 8 && offset_now != 16) continue;
-          // if (offset_now % 4 != 0) continue;
-          if (it->second.offset == 0) {
-            it->second.offset = offset_now;
-            it->second.confidence = 0;
-          } else if (it->second.offset == offset_now) {
-            it->second.confidence++;
-          } else {
-            it->second.confidence--;
-            if (it->second.confidence < 0) {
+
+      if (it_meta->second.meeted_pc.find(trace.pc) !=
+          it_meta->second.meeted_pc.end()) {
+        if (it != it_meta->second.pc_value_candidate.end()) {
+          if (addr != it->second.addr && trace.value != it->second.value &&
+              abs_sub(addr, it->second.addr) %
+                      abs_sub(trace.value, it->second.value) ==
+                  0) {
+            offset_now = abs_sub(addr, it->second.addr) /
+                         abs_sub(trace.value, it->second.value);
+            if (it_meta->first == 0x401292) {
+              std::cerr << "fuck0 " << offset_now << " " << it->second.offset
+                        << std::endl;
+            }
+            if (offset_now != 4 && offset_now != 8 && offset_now != 16)
+              continue;
+
+            // if (offset_now % 4 != 0) continue;
+            if (it->second.offset == 0) {
               it->second.offset = offset_now;
               it->second.confidence = 0;
+              tmp[trace.pc] = it->second;
+            } else if (it->second.offset == offset_now) {
+              it->second.confidence++;
+              tmp[trace.pc] = it->second;
+            } else {
+              it->second.confidence--;
+              if (it->second.confidence < 0) {
+                it->second.offset = offset_now;
+                it->second.confidence = 0;
+              }
             }
           }
-        }
-        if (it->second.confidence >= INDIRECT_THERSHOLD) {
-          it_meta->second.pc_value =
-              PCmeta::pc_value_meta(trace.pc, addr - trace.value * offset_now);
-          it_meta->second.pc_value.offset = offset_now;
-          it_meta->second.pc_value_candidate.clear();
-          return true;
+          if (it->second.confidence >= INDIRECT_THERSHOLD) {
+            it_meta->second.pc_value = PCmeta::pc_value_meta(
+                trace.pc, addr - trace.value * offset_now);
+            it_meta->second.pc_value.offset = offset_now;
+            // it_meta->second.pc_value_candidate.clear();
+            it_meta->second.maybe_pattern[to_underlying(PATTERN::INDIRECT)] =
+                true;
+            return true;
+          }
         }
       } else {
-        it_meta->second.pc_value_candidate[trace.pc] =
-            PCmeta::pc_value_meta(trace.value, addr);
+        tmp[trace.pc] = PCmeta::pc_value_meta(trace.value, addr);
+        it_meta->second.meeted_pc.insert(trace.pc);
       }
     }
   }
-  return false;
+  it_meta->second.pc_value_candidate = tmp;
+  if (tmp.empty()) {
+    if (it_meta->second.maybe_pattern[to_underlying(PATTERN::INDIRECT)] ==
+        true) {
+      it_meta->second.is_not_pattern[to_underlying(PATTERN::INDIRECT)] = true;
+    }
+  }
+  return !tmp.empty();
 }
 
 bool TraceList::check_chain_pattern(
@@ -157,7 +189,8 @@ bool TraceList::check_chain_pattern(
        it_trace++) {
     auto &trace = *it_trace;
     if (trace.pc == it_meta->first) break;  // find loop
-    if (pc2meta[trace.pc].is_pointerA() && abs_sub(trace.value, addr) >= 2 &&
+    if (pc2meta[trace.pc].is_pattern(PATTERN::POINTER_A) &&
+        abs_sub(trace.value, addr) >= 2 &&
         abs_sub(trace.value, addr) <= 65536) {
       auto it = it_meta->second.chain_candidate.find(trace.pc);
       if (it == it_meta->second.chain_candidate.end()) {
@@ -185,7 +218,7 @@ bool TraceList::check_chain_pattern(
 void TraceList::add_trace(unsigned long long int pc,
                           unsigned long long int addr,
                           unsigned long long int value, bool isWrite,
-                          unsigned long long int id, const int inst_id) {
+                          unsigned long long int &id, const int inst_id) {
   TraceNode tn(pc, addr, value, isWrite, id);
   auto it_val = value2trace.find(addr);
   {  // value2trace
@@ -212,30 +245,37 @@ void TraceList::add_trace(unsigned long long int pc,
     if (!it_meta->second.confirm) {
       for (bool X = true; X; X = false) {
         if (check_static_pattern(it_meta, addr)) {
-          it_meta->second.pattern_confidence[to_underlying(PATTERN::STATIC)]++;
-          if (it_meta->second
-                  .pattern_confidence[to_underlying(PATTERN::STATIC)] >=
-              STATIC_THERSHOLD) {
-            it_meta->second.pattern = PATTERN::STATIC;
-            it_meta->second.confirm = true;
-            break;
-          }
+          // if (!it_meta->second.is_not_static) {
+          //   it_meta->second
+          //       .pattern_confidence[to_underlying(PATTERN::STATIC)]++;
+          //   if (it_meta->second
+          //           .pattern_confidence[to_underlying(PATTERN::STATIC)] >=
+          //       STATIC_THERSHOLD) {
+          //     it_meta->second.pattern = PATTERN::STATIC;
+          //     it_meta->second.confirm = true;
+          //     break;
+          //   }
+          // }
         }
         if (check_stride_pattern(it_meta, addr)) {
-          it_meta->second.pattern_confidence[to_underlying(PATTERN::STRIDE)]++;
+          // it_meta->second.pattern_confidence[to_underlying(PATTERN::STRIDE)]++;
         }
         if (check_pointer_pattern(it_meta, it_val)) {
           it_meta->second.pattern_confidence[to_underlying(PATTERN::pointer)]++;
-          if (check_pointerB_pattern(it_meta)) {
-            it_meta->second.pattern = PATTERN::POINTER_B;
-            it_meta->second.confirm = true;
-            break;
+          if (it_meta->second
+                  .pattern_confidence[to_underlying(PATTERN::pointer)] >=
+              POINTER_THERSHOLD) {
+            if (check_pointerB_pattern(it_meta)) {
+              it_meta->second.pattern = PATTERN::POINTER_B;
+              it_meta->second.confirm = true;
+              break;
+            }
           }
         }
         if (check_pointerA_pattern(it_meta, addr)) {
-          it_meta->second.pattern = PATTERN::POINTER_A;
-          it_meta->second.confirm = true;
-          break;
+          // it_meta->second.pattern = PATTERN::POINTER_A;
+          // it_meta->second.confirm = true;
+          // break;
         }
         // if (check_chain_pattern(it_meta, addr)) {
         //   it_meta->second.pattern = PATTERN::CHAIN;
@@ -243,9 +283,9 @@ void TraceList::add_trace(unsigned long long int pc,
         //   break;
         // }
         if (check_indirect_pattern(it_meta, addr)) {
-          it_meta->second.pattern = PATTERN::INDIRECT;
-          it_meta->second.confirm = true;
-          break;
+          // it_meta->second.pattern = PATTERN::INDIRECT;
+          // it_meta->second.confirm = true;
+          // break;
         }
       }
     }
@@ -257,7 +297,7 @@ void TraceList::add_trace(unsigned long long int pc,
   }
   {
     it_meta->second.count++;
-    it_meta->second.lastaddr_2 = it_meta->second.lastaddr;
+    // it_meta->second.lastaddr_2 = it_meta->second.lastaddr;
     it_meta->second.lastaddr = addr;
     // it_meta->second.inst_id_list.push_back(inst_id);
     it_meta->second.lastvalue = value;
@@ -282,20 +322,37 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
       pcCount(PATTERN_NUM, 0);
   for (auto &[pc, meta] : pc2meta) {
     if (meta.pattern == PATTERN::OTHER) {
-      int champ_confidence = 0;
+      int champ_confidence = 16;
       for (int i = 0; i < PATTERN_NUM - 1; i++) {
         if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
             static_cast<PATTERN>(i) == PATTERN::CHAIN ||
-            static_cast<PATTERN>(i) == PATTERN::INDIRECT ||
-            static_cast<PATTERN>(i) == PATTERN::POINTER_A ||
             static_cast<PATTERN>(i) == PATTERN::POINTER_B)
           continue;
-        if (meta.pattern_confidence[i] > champ_confidence) {
+        if (static_cast<PATTERN>(i) == PATTERN::pointer) {
+          if (!meta.lastpc_candidate.empty()) {
+            meta.pattern = PATTERN::pointer;
+          }
+        } else if (meta.maybe_pattern[i] && !meta.is_not_pattern[i]) {
+          meta.pattern = static_cast<PATTERN>(i);
+        } else if (meta.pattern_confidence[i] > champ_confidence) {
           meta.pattern = static_cast<PATTERN>(i);
           champ_confidence = meta.pattern_confidence[i];
         }
       }
       if (meta.pattern == PATTERN::OTHER) {
+        for (int i = 0; i < PATTERN_NUM - 1; i++) {
+          if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
+              static_cast<PATTERN>(i) == PATTERN::CHAIN ||
+              static_cast<PATTERN>(i) == PATTERN::INDIRECT ||
+              static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
+              static_cast<PATTERN>(i) == PATTERN::pointer ||
+              static_cast<PATTERN>(i) == PATTERN::POINTER_A)
+            continue;
+          if (meta.pattern_confidence[i] > champ_confidence) {
+            meta.pattern = static_cast<PATTERN>(i);
+            champ_confidence = meta.pattern_confidence[i];
+          }
+        }
         if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
       }
     }

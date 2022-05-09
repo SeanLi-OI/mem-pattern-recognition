@@ -40,6 +40,7 @@ const uint16_t STRIDE_THERSHOLD = 32;
 const uint16_t POINTER_A_THERSHOLD = 32;
 const uint16_t INDIRECT_THERSHOLD = 32;
 const uint16_t PATTERN_THERSHOLD = 32;
+const uint16_t POINTER_THERSHOLD = 32;
 const uint16_t CHAIN_THERSHOLD = 32;
 const uint16_t STATIC_THERSHOLD = 256;
 

@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "macro.h"
 #include "pc_meta.h"
 
 const std::string sep = "\t";
@@ -105,7 +106,11 @@ int main(int argc, char* argv[]) {
   // out << "PC" << sep << "Count" << sep << "Miss Count" << sep << "Pattern"
   //     << std::endl;
   for (auto& [pc, meta] : pc2meta) {
+#ifdef ENABLE_PC_DIFF
+    auto ret = pc2line(argv[4], pc >> 2);
+#else
     auto ret = pc2line(argv[4], pc);
+#endif
     out << std::hex << pc << sep << std::dec << meta.first.count << sep
         << std::dec << meta.second << sep
         << PATTERN_NAME[to_underlying(meta.first.pattern)] << sep << ret
