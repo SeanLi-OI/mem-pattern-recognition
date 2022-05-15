@@ -34,6 +34,9 @@ void PCmeta::input(std::ifstream &in) {
       in >> std::hex >> pc_value.value >> std::hex >> pc_value.addr >>
           std::dec >> pc_value.offset;
       break;
+    case PATTERN::STRUCT_POINTER:
+      in >> std::hex >> last_pc_sp >> std::dec >> offset_sp;
+      break;
     default:
       break;
   }
@@ -57,6 +60,10 @@ void PCmeta::output(std::ofstream &out) {
     case PATTERN::INDIRECT:
       out << " " << std::hex << pc_value.value << " " << std::hex
           << pc_value.addr << " " << std::dec << pc_value.offset << std::endl;
+      break;
+    case PATTERN::STRUCT_POINTER:
+      out << " " << std::hex << last_pc_sp << " " << std::dec << offset_sp
+          << std::endl;
       break;
     default:
       out << std::endl;

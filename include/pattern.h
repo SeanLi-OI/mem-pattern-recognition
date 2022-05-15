@@ -3,12 +3,14 @@
 
 #include <string>
 
-const int PATTERN_NUM = 9;
+const int PATTERN_NUM = 10;
 const std::string PATTERN_NAME[] = {
-    "fresh\t\t",     "static\t\t", "stride\t\t", "pointer\t\t", "pointer_chase",
-    "pointer_array", "indirect\t", "chain\t\t",  "other\t\t"};
+    "fresh\t\t",   "struct_pointer", "static\t\t",    "stride\t\t",
+    "pointer\t\t", "pointer_chase",  "pointer_array", "indirect\t",
+    "chain\t\t",   "other\t\t"};
 enum PATTERN : uint16_t {
   FRESH,
+  STRUCT_POINTER,
   STATIC,
   STRIDE,
   pointer,
@@ -16,11 +18,12 @@ enum PATTERN : uint16_t {
   POINTER_B,
   INDIRECT,
   CHAIN,
-  OTHER
+  OTHER  // Make sure other is the last one
 };
 
 static std::unordered_map<std::string, PATTERN> const pattern_table = {
     {"fresh", PATTERN::FRESH},
+    {"struct_pointer", PATTERN::STRUCT_POINTER},
     {"static", PATTERN::STATIC},
     {"stride", PATTERN::STRIDE},
     {"pointer", PATTERN::pointer},
@@ -43,5 +46,6 @@ const uint16_t PATTERN_THERSHOLD = 32;
 const uint16_t POINTER_THERSHOLD = 32;
 const uint16_t CHAIN_THERSHOLD = 32;
 const uint16_t STATIC_THERSHOLD = 256;
+const uint16_t STRUCT_POINTER_THERSHOLD = 32;
 
 #endif

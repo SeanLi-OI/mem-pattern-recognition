@@ -67,7 +67,7 @@ class TraceList {
   bool check_indirect_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
-  bool check_chain_pattern(
+  bool check_struct_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
 

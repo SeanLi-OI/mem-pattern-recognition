@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# Written By Lixiang
+
 mpr_dir=/home/lixiang/mem-pattern-recognition
 champsim_dir=/home/lixiang/champsim
 bench_dir=${mpr_dir}/test-cases
@@ -23,6 +26,7 @@ trace_len=300000000
 if [ "$RUN_UNION_TRACE" = true ] ; then
     # Build app
     gcc -O0 -g ${binary_file}.c -o ${binary_file}
+    objdump -S ${binary_file} > ${binary_file}.asm
     # app_input=
     if [ -f "$champsim_trace_file" ] ; then
         rm "$champsim_trace_file"

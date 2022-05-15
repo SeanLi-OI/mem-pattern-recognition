@@ -37,6 +37,12 @@ void PatternList::add_trace(unsigned long long int pc,
                           it_meta->second.pc_value.offset +
                       it_meta->second.pc_value.addr;
       break;
+    case PATTERN::STRUCT_POINTER:
+      next_addr[pc] = pc2meta[it_meta->second.last_pc_sp].lastvalue +
+                      it_meta->second.offset_sp;
+      break;
+    default:
+      break;
   }
   all_count[to_underlying(it_meta->second.pattern)]++;
   auto it = next_addr.find(pc);
@@ -61,8 +67,6 @@ void PatternList::add_trace(unsigned long long int pc,
       }
       break;
     case PATTERN::POINTER_A:
-      std::cerr << std::hex << pc << " " << std::hex << value << " " << std::dec
-                << it_meta->second.pointerA_offset_candidate << std::endl;
       next_addr[pc] = value + it_meta->second.pointerA_offset_candidate;
       break;
     default:
@@ -92,11 +96,11 @@ void PatternList::printStats(unsigned long long totalCnt,
     total_sum += total_count[i];
   }
   out << "=================================================" << std::endl;
-  out << "Fresh : " << MY_ALIGN(totalCnt - total_sum)
-      << PERCENT(totalCnt - total_sum, totalCnt) << std::endl;
-  out << "Hit   : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, totalCnt)
+  out << "Cover       : " << MY_ALIGN(total_sum) << PERCENT(total_sum, totalCnt)
       << std::endl;
-  out << "Miss  : " << MY_ALIGN(total_sum - hit_sum)
-      << PERCENT(total_sum - hit_sum, totalCnt) << std::endl;
+  out << "Hit         : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, total_sum)
+      << std::endl;
+  out << "Hit Overall : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, totalCnt)
+      << std::endl;
   out << "=================================================" << std::endl;
 }

@@ -26,9 +26,22 @@ class PCmeta {  // Metadata for each PC
   std::set<unsigned long long int> meeted_pc;
   pc_value_meta pc_value;  // value(PC), addr(base_addr), offset(offset)
 
-  // CHAIN
-  std::unordered_map<unsigned long long int, std::pair<long long int, int>>
-      chain_candidate;  // PC -> <offset, condifence>
+  // STRUCT_POINTER
+  struct struct_pointer_meta {
+    unsigned long long int pc;
+    long long offset;
+    int confidence;
+    struct_pointer_meta() {}
+    struct_pointer_meta(unsigned long long int _p) : pc(_p) {
+      offset = 0;
+      confidence = 0;
+    }
+  };
+  std::unordered_map<unsigned long long int, struct_pointer_meta>
+      struct_pointer_candidate;  // PC-> <PC, offset>
+  std::set<unsigned long long int> meeted_pc_sp;
+  long long offset_sp;
+  unsigned long long last_pc_sp;
 
   // pointer
   std::set<unsigned long long int> lastpc_candidate;

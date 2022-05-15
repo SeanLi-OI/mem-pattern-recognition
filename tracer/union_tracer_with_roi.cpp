@@ -152,6 +152,7 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   if (!tracing_on) return;
 
   instrCount++;
+  if (instrCount <= KnobSkipInstructions.Value()) tracing_on = false;
   // printf("%llx\n",(unsigned long long int)ip);
   // printf("[%p %u %s ", ip, op_code, (char*)opstring);
 
