@@ -30,10 +30,6 @@ bool TraceList::check_static_pattern(
     return false;
   }
 }
-bool TraceList::check_dual_static_pattern(
-    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-    unsigned long long int &addr) {
-}
 
 bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
