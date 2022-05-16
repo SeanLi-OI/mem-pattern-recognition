@@ -72,6 +72,8 @@ void PatternList::add_trace(unsigned long long int pc,
     default:
       break;
   }
+  it_meta->second.pointerA_offset_candidate =
+      (long long)addr - (long long)it_meta->second.lastvalue;
   it_meta->second.lastaddr = addr;
   it_meta->second.lastvalue = value;
 }

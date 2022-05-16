@@ -50,12 +50,15 @@ class PCmeta {  // Metadata for each PC
   // pointerA
   long long int pointerA_offset_candidate;
   unsigned long long int lastvalue;
+  bool pointerA_tmp;
 
   // STATIC & STRIDE
   unsigned long long int lastaddr;
+  long long static_tmp;
 
   // STRIDE
   long long int offset_stride;
+  bool stride_tmp;
 
   // common
   PATTERN pattern;
@@ -70,6 +73,9 @@ class PCmeta {  // Metadata for each PC
     lastpc = 0;
     confirm = 0;
     offset_stride = 0;
+    stride_tmp = false;
+    pointerA_tmp = false;
+    static_tmp = false;
     pointerA_offset_candidate = -1;
     pattern = PATTERN::OTHER;
     for (int i = 0; i < PATTERN_NUM; i++) {

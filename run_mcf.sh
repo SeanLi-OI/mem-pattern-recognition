@@ -3,4 +3,4 @@
 /mnt/centos00-home/lixiang/spec2017/benchspec/CPU/505.mcf_r/build/build_base_mytest-m64.0001/mcf_r \
 /mnt/centos00-home/lixiang/spec2017/benchspec/CPU/505.mcf_r/data/refrate/input/inp.in \
 /home/lixiang/mem-pattern-recognition/perf-test/roi_mcf_2.txt \
-50000000000 false true false true true false
+0 false true false true true false

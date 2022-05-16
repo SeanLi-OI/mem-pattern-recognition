@@ -46,9 +46,9 @@ void debug_trace(unsigned long long &id, unsigned long long int ip,
   id++;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
-  if (ip == 0x406aa9)
-    fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
-            (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+//   if (ip == 0x4069e1)
+//     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
+//             (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
 
 int main(int argc, char *argv[]) {

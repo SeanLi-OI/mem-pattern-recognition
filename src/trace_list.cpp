@@ -20,13 +20,24 @@ void TraceList::add_next(std::deque<TraceNode> &L, TraceNode tn) {
 bool TraceList::check_static_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  if (!it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)] &&
-      it_meta->second.lastaddr == addr) {
+  // if (it_meta->first == 0x4069e1)
+  //   std::cerr << std::hex << addr << " " << std::hex <<
+  //   it_meta->second.lastaddr
+  //             << " " << std::dec << it_meta->second.static_tmp << " "
+  //             <<
+  //             it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)]
+  //             << std::endl;
+  if (it_meta->second.lastaddr == addr) {
     it_meta->second.maybe_pattern[to_underlying(PATTERN::STATIC)] = true;
+    it_meta->second.static_tmp++;
     return true;
   } else {
-    if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STATIC)] == true)
-      it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)] = true;
+    if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STATIC)] == true) {
+      if (it_meta->second.static_tmp > 0)
+        it_meta->second.static_tmp--;
+      else
+        it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)] = true;
+    }
     return false;
   }
 }
@@ -39,9 +50,16 @@ bool TraceList::check_stride_pattern(
   if (it_meta->second.offset_stride != 0) {
     if (offset == it_meta->second.offset_stride) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] = true;
+      it_meta->second.stride_tmp = true;
+      return true;
     } else {
-      if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] == true)
-        it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
+      if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] ==
+          true) {
+        if (it_meta->second.stride_tmp)
+          it_meta->second.stride_tmp = false;
+        else
+          it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
+      }
     }
   } else {
     it_meta->second.offset_stride = offset;
@@ -92,11 +110,16 @@ bool TraceList::check_pointerA_pattern(
   } else {
     if (it_meta->second.pointerA_offset_candidate == offset_now) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
+      it_meta->second.pointerA_tmp = true;
     } else {
       if (it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] ==
-          true)
-        it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
-            true;
+          true) {
+        if (it_meta->second.pointerA_tmp)
+          it_meta->second.pointerA_tmp = false;
+        else
+          it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
+              true;
+      }
     }
   }
   return false;
