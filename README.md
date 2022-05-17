@@ -3,6 +3,7 @@
 以五种访存模式生成器为基础
 跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）输出模式识别统计信息（5）统计覆盖率与准确率；这一整个pipeline
 ```bash
+git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git
 cd external/ChampSim
 ./config.sh champsim_config.json
 make # build Champsim
