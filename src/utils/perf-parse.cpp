@@ -39,6 +39,8 @@ void parse(std::string str) {
 int main(int argc, char* argv[]) {
   std::ifstream input(argv[1]);
   std::ofstream output(argv[2]);
+  std::cerr << "Input: " << argv[1] << std::endl;
+  std::cerr << "Output: " << argv[2] << std::endl;
   for (std::string line; std::getline(input, line);) {
     // std::cerr << "[" << line[0] << "]" << std::endl;
     if (line[0] != '\t' && line[0] != ' ') continue;

@@ -1,8 +1,7 @@
 # Demo
 
 以五种访存模式生成器为基础
-跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）最终输出统计信息；这一整个pipeline
-（当然还有预测准确性这一功能，有需求可以参考Quick Start中的描述进行测试）
+跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）输出模式识别统计信息（5）统计覆盖率与准确率；这一整个pipeline
 ```bash
 cd external/ChampSim
 ./config.sh champsim_config.json
@@ -56,7 +55,7 @@ build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>err
 
 # Misc
 
-整个项目大概就这些，编译链接由CMake驱动
+整个项目编译链接由CMake驱动
 ```
 mem-pattern-recognition/
 ├── build.sh
