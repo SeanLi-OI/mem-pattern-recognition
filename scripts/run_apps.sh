@@ -6,7 +6,7 @@ apps+=("stride")
 apps+=("pointera")
 apps+=("pointerb")
 apps+=("indirect")
-apps+=("chain")
+# apps+=("chain")
 apps+=("struct_pointer")
 
 bench_dir=/home/lixiang/mem-pattern-recognition/test-cases
