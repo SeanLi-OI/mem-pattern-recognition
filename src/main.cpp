@@ -24,7 +24,7 @@ void add_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
-  //   if (ip >= 0x401224 && ip <= 0x40122b)
+  //   if (ip == 0x40484f)
   //     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
   //             (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
@@ -46,9 +46,9 @@ void debug_trace(unsigned long long &id, unsigned long long int ip,
   id++;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
-//   if (ip == 0x4069e1)
-//     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
-//             (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+  if (ip == 0x404832 || ip == 0x404836)
+    fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
+            (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
 
 int main(int argc, char *argv[]) {

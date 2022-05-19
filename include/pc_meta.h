@@ -50,7 +50,7 @@ class PCmeta {  // Metadata for each PC
   // pointerA
   long long int pointerA_offset_candidate;
   unsigned long long int lastvalue;
-  bool pointerA_tmp;
+  long long pointerA_tmp;
 
   // STATIC & STRIDE
   unsigned long long int lastaddr;

@@ -54,6 +54,13 @@ build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>err
 
 最终看的就是stat_file和out_file。
 
+# ROI extension
+* 本项目支持分析应用ROI(参见scripts/analyze_roi.sh)，生成roi_raw.txt（三列，分别为ROI的起始地址，结束地址，以及运行次数，以空格分隔）后，需要人工从中挑选ROI区域给出roi.txt（两列，分别为ROI的起始地址和结束地址，以空格分隔）。
+
+* 本项目同样支持仅抓取ROI区域trace（参见scripts/run_app_with_roi.sh），其中需要上述roi.txt（也可依照格式自定义ROI区域）。
+
+
+
 # Misc
 
 整个项目编译链接由CMake驱动
@@ -109,3 +116,4 @@ mem-pattern-recognition/
     ├── union_tracer.cpp
     └── union_tracer_with_roi.cpp
 ```
+

@@ -105,17 +105,26 @@ bool TraceList::check_pointerA_pattern(
     unsigned long long int &addr) {
   long long offset_now = (long long)addr - (long long)it_meta->second.lastvalue;
   if (addr == it_meta->second.lastaddr) return false;
+  // if (it_meta->first == 0x40484f) {
+  //   std::cerr
+  //       << offset_now << " " << it_meta->second.pointerA_offset_candidate <<
+  //       " "
+  //       << it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)]
+  //       << " " << it_meta->second.pointerA_tmp << " "
+  //       << it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)]
+  //       << std::endl;
+  // }
   if (it_meta->second.pointerA_offset_candidate == -1) {
     it_meta->second.pointerA_offset_candidate = offset_now;
   } else {
     if (it_meta->second.pointerA_offset_candidate == offset_now) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
-      it_meta->second.pointerA_tmp = true;
+      it_meta->second.pointerA_tmp++;
     } else {
       if (it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] ==
           true) {
-        if (it_meta->second.pointerA_tmp)
-          it_meta->second.pointerA_tmp = false;
+        if (it_meta->second.pointerA_tmp > 0)
+          it_meta->second.pointerA_tmp--;
         else
           it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
               true;

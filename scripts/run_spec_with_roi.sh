@@ -17,7 +17,7 @@ roi_file=$4
 binary_file=${app_binary}
 champsim_trace_file=${trace_dir}/champsim/${app}.champsim.trace
 mpr_trace_file=${trace_dir}/mpr/${app}.mpr.trace
-skip_len=50000000000
+skip_len=500000000
 trace_len=$5 # 500000000
 
 # Get trace from union tracer

@@ -23,6 +23,7 @@ using std::vector;
 
 const static size_t REG_SIZE = 8;
 
+#define TRACE_FUNC_NAME
 // #define DEBUG
 struct MemRecord {
   ADDRINT addr;
@@ -365,8 +366,10 @@ static void rec_inst(ADDRINT ip, MsRecord &k) {
   k.ip = ip;
   k.tid = PIN_ThreadId();
   fwrite(&k, sizeof(MsRecord), 1, out_mpr);
+#ifdef TRACE_FUNC_NAME
   fwritestr(func_name, out_mpr);
   fwritestr(image, out_mpr);
+#endif
   trace_this = true;
 #ifdef DEBUG
   print(ip, k.r0, 0);
