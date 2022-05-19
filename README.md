@@ -73,6 +73,7 @@ mem-pattern-recognition/
 │   └── gflags
 ├── include
 │   ├── instruction.h
+│   ├── macro.h
 │   ├── pattern.h
 │   ├── pattern_list.h
 │   ├── pc_meta.h
@@ -80,10 +81,12 @@ mem-pattern-recognition/
 │   └── tracereader.h
 ├── README.md
 ├── scripts
+│   ├── analyze_roi.sh
 │   ├── make_trace.sh
 │   ├── run_app.sh
 │   ├── run_apps.sh
 │   ├── run_app_with_roi.sh
+│   ├── run_binary.sh
 │   ├── run_spec.sh
 │   ├── run_spec_with_roi.sh
 │   └── test_trace.sh
@@ -94,19 +97,19 @@ mem-pattern-recognition/
 │   ├── trace_list.cpp
 │   ├── tracereader.cpp
 │   └── utils
-│       ├── pattren2line.cpp
+│       ├── pattern2line.cpp
 │       └── perf-parse.cpp
 ├── test-cases
-│   ├── chain
-│   │   └── chain.c
 │   ├── indirect
 │   │   └── indirect.c
 │   ├── pointera
 │   │   └── pointera.c
 │   ├── pointerb
 │   │   └── pointerb.c
-│   └── stride
-│       └── stride.c
+│   ├── stride
+│   │   └── stride.c
+│   └── struct_pointer
+│       └── struct_pointer.c
 └── tracer
     ├── clean_tracer.sh
     ├── makefile
