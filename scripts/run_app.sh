@@ -2,14 +2,14 @@
 
 # Written By Lixiang
 
-mpr_dir=/home/lixiang/mem-pattern-recognition
-champsim_dir=/home/lixiang/champsim
+mpr_dir=${PWD}
+champsim_dir=${PWD}/external/ChampSim
 bench_dir=${mpr_dir}/test-cases
 trace_dir=${mpr_dir}/trace
 result_dir=${mpr_dir}/result
-RUN_UNION_TRACE=false
+RUN_UNION_TRACE=true
 RUN_MPR=true
-RUN_CHAMPSIM=false
+RUN_CHAMPSIM=true
 RUN_VALIDATE=true
 RUN_PARSER=true
 
@@ -34,7 +34,9 @@ if [ "$RUN_UNION_TRACE" = true ] ; then
     if [ -f "$mpr_trace_file" ] ; then
         rm "$mpr_trace_file"
     fi
-    pin -t ${mpr_dir}/tracer/obj-intel64/union_tracer.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -- ${binary_file} # <${app_input}
+    mkdir -p ${trace_dir}/champsim
+    mkdir -p ${trace_dir}/mpr
+    pin -t ${mpr_dir}/tracer/obj-intel64/union_tracer.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -- ${binary_file} 2>${result_dir}/${app}/tracer_err.txt
     gzip -c ${champsim_trace_file} > ${champsim_trace_file}.gz
     if [ -f "$champsim_trace_file" ] ; then
         rm "$champsim_trace_file"

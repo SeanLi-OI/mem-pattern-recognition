@@ -9,7 +9,7 @@ apps+=("indirect")
 # apps+=("chain")
 apps+=("struct_pointer")
 
-bench_dir=/home/lixiang/mem-pattern-recognition/test-cases
+bench_dir=${PWD}/test-cases
 
 for app in "${apps[@]}"
 do

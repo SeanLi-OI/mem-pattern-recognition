@@ -9,4 +9,4 @@ cd build
 if [[ -z "$1" && "$1" = "total" ]]; then
     cmake3 ../
 fi
-make -j8
+make -j4

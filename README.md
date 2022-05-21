@@ -4,7 +4,12 @@
 跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）输出模式识别统计信息（5）统计覆盖率与准确率；这一整个pipeline
 ```bash
 git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git
-cd external/ChampSim
+cd external
+wget https://software.intel.com/sites/landingpage/pintool/downloads/pin-3.23-98579-gb15ab7903-gcc-linux.tar.gz
+tar -zxvf pin-3.23-98579-gb15ab7903-gcc-linux.tar.gz
+export PIN_ROOT=${PWD}/pin-3.23-98579-gb15ab7903-gcc-linux
+export PATH=${PIN_ROOT}:$PATH # download pin
+cd ChampSim
 ./config.sh champsim_config.json
 make # build Champsim
 cd ../../tracer
