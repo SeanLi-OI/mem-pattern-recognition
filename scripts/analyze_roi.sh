@@ -14,9 +14,9 @@ app_dir=/home/zhoujiapeng
 # bin=seq-csr
 # args="-s 16 -e 16"
 
-app=libquantum
-bin=libquantum_base.amd64-m64-gcc42-nn
-args="100 8"
+# app=libquantum
+# bin=libquantum_base.amd64-m64-gcc42-nn
+# args="100 8"
 
 # app=NPB3
 # bin=NPB3.3.1/NPB3.3-SER/bin/cg.A.x

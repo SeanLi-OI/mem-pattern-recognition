@@ -1,7 +1,7 @@
 #!/bin/bash
 mpr_dir=/home/lixiang/mem-pattern-recognition
-trace_dir=/mnt/centos00-home/lixiang/roi_test/trace
-result_dir=${mpr_dir}/roi_test/result
+trace_dir=/mnt/centos00-home/lixiang/trace
+result_dir=${mpr_dir}/result
 champsim_dir=/home/lixiang/ChampSim
 RUN_UNION_TRACE=$6
 RUN_MPR=$7
@@ -13,11 +13,10 @@ RUN_DEBUG=${11}
 app=$1
 app_binary=$2
 app_input=$3
-roi_file=$4
 binary_file=${app_binary}
 champsim_trace_file=${trace_dir}/champsim/${app}.champsim.trace
 mpr_trace_file=${trace_dir}/mpr/${app}.mpr.trace
-skip_len=5000000000
+skip_len=$4
 trace_len=$5 # 500000000
 
 # Get trace from union tracer
@@ -30,7 +29,7 @@ if [ "$RUN_UNION_TRACE" = true ] ; then
     if [ -f "$mpr_trace_file" ] ; then
         rm "$mpr_trace_file"
     fi
-    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer_with_roi.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -r ${roi_file} -- ${binary_file} ${app_input}
+    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -- ${binary_file} ${app_input}
     gzip -c ${mpr_trace_file} > ${mpr_trace_file}.gz &
     gzip -c ${champsim_trace_file} > ${champsim_trace_file}.gz &
     wait
