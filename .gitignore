@@ -10,3 +10,4 @@ trace.v1(deprecated)/
 result/
 build/
 Makefile(deprecated)
+perf-test/
