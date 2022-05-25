@@ -25,8 +25,8 @@ void add_trace(TraceList &traceList, unsigned long long &id,
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   //   if (ip == 0x40484f)
-  //     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
-  //             (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+  // fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
+  //         (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
 void valid_trace(PatternList &patternList, unsigned long long &id,
                  unsigned long long int ip, MemRecord &r, bool isWrite,
@@ -40,15 +40,18 @@ void valid_trace(PatternList &patternList, unsigned long long &id,
   //   fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
   //           (unsigned long long)ip, (unsigned long long)r.addr, tmp);
 }
-void debug_trace(unsigned long long &id, unsigned long long int ip,
-                 MemRecord &r, bool isWrite, const int inst_id) {
+void debug_trace(TraceList &traceList, unsigned long long &id,
+                 unsigned long long int ip, MemRecord &r, bool isWrite,
+                 const int inst_id) {
   if (r.len == 0 || r.len > 8) return;
-  id++;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
-  if (ip == 0x404832 || ip == 0x404836)
+  if (ip == 0x401661) {
+    id++;
     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
             (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+    //     traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -133,6 +136,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Reading trace from " << FLAGS_trace << std::endl;
     std::cout << "Reading pattern to " << FLAGS_pattern << std::endl;
     auto traces = get_tracereader(FLAGS_trace, 1, 0);
+    auto traceList = TraceList();
     unsigned long long id = 0;
     int inst_id = 0;
     bool isend = false;
@@ -148,15 +152,16 @@ int main(int argc, char *argv[]) {
       debug_trace(id, (inst.ip << 2) | 2, inst.w0, 1, inst_id);
       if (id == FLAGS_len) break;
 #else
-      debug_trace(id, inst.ip, inst.r0, 0, inst_id);
+      debug_trace(traceList, id, inst.ip, inst.r0, 0, inst_id);
       if (id == FLAGS_len) break;
-      debug_trace(id, inst.ip, inst.r1, 0, inst_id);
+      debug_trace(traceList, id, inst.ip, inst.r1, 0, inst_id);
       if (id == FLAGS_len) break;
-      debug_trace(id, inst.ip, inst.w0, 1, inst_id);
+      debug_trace(traceList, id, inst.ip, inst.w0, 1, inst_id);
       if (id == FLAGS_len) break;
 #endif
+      // if (inst.ip == 0x40318f) std::cerr << std::endl;
     }
-    // patterns.printStats(id, FLAGS_result.c_str());
+    traceList.printStats(id, FLAGS_stat.c_str());
     std::cout << "==================Debug End===================" << std::endl;
   }
   return 0;

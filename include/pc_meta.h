@@ -53,12 +53,12 @@ class PCmeta {  // Metadata for each PC
   long long pointerA_tmp;
 
   // STATIC & STRIDE
-  unsigned long long int lastaddr;
+  unsigned long long int lastaddr, lastaddr_2;
   long long static_tmp;
 
   // STRIDE
   long long int offset_stride;
-  bool stride_tmp;
+  long long stride_tmp;
 
   // common
   PATTERN pattern;
@@ -69,13 +69,13 @@ class PCmeta {  // Metadata for each PC
   bool maybe_pattern[PATTERN_NUM];
   // std::vector<int> inst_id_list;
   PCmeta() {
-    lastaddr = 0;
+    lastaddr = lastaddr_2 = 0;
     lastpc = 0;
     confirm = 0;
     offset_stride = 0;
-    stride_tmp = false;
-    pointerA_tmp = false;
-    static_tmp = false;
+    stride_tmp = 0;
+    pointerA_tmp = 0;
+    static_tmp = 0;
     pointerA_offset_candidate = -1;
     pattern = PATTERN::OTHER;
     for (int i = 0; i < PATTERN_NUM; i++) {

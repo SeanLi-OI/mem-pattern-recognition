@@ -3,8 +3,8 @@
 #include "pattern_list.h"
 
 #include <fstream>
-#include <iomanip>
-#include <iostream>
+
+#include "macro.h"
 
 PatternList::PatternList(const char filename[]) {
   std::ifstream in(filename);
@@ -58,11 +58,13 @@ void PatternList::add_trace(unsigned long long int pc,
       next_addr[pc] = it_meta->second.lastaddr;
       break;
     case PATTERN::STRIDE:
-      if (it_meta->second.lastaddr != 0) {
-        if (addr > it_meta->second.lastaddr) {
-          next_addr[pc] = addr + addr - it_meta->second.lastaddr;
+      if (it_meta->second.lastaddr_2 != 0) {
+        if (addr > it_meta->second.lastaddr_2) {
+          next_addr[pc] =
+              it_meta->second.lastaddr + addr - it_meta->second.lastaddr_2;
         } else {
-          next_addr[pc] = addr - (it_meta->second.lastaddr - addr);
+          next_addr[pc] =
+              it_meta->second.lastaddr - (it_meta->second.lastaddr_2 - addr);
         }
       }
       break;
@@ -74,15 +76,10 @@ void PatternList::add_trace(unsigned long long int pc,
   }
   it_meta->second.pointerA_offset_candidate =
       (long long)addr - (long long)it_meta->second.lastvalue;
+  it_meta->second.lastaddr_2 = it_meta->second.lastaddr;
   it_meta->second.lastaddr = addr;
   it_meta->second.lastvalue = value;
 }
-
-#define PERCENT(CNT, TOTAL)     \
-  "  (" << std::setprecision(4) \
-        << (((TOTAL) == 0) ? 0 : ((CNT) * (double)100.0 / (TOTAL))) << "%)"
-
-#define MY_ALIGN(n) std::left << std::setw(12) << (n)
 
 void PatternList::printStats(unsigned long long totalCnt,
                              const char filename[]) {
