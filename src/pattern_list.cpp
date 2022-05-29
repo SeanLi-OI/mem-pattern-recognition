@@ -69,7 +69,7 @@ void PatternList::add_trace(unsigned long long int pc,
       }
       break;
     case PATTERN::POINTER_A:
-      next_addr[pc] = value + it_meta->second.pointerA_offset_candidate;
+      next_addr[pc] = value + addr - it_meta->second.lastvalue;
       break;
     default:
       break;

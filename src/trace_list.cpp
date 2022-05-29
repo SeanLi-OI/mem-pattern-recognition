@@ -120,18 +120,18 @@ bool TraceList::check_pointerA_pattern(
   if (it_meta->second.pointerA_offset_candidate == -1) {
     it_meta->second.pointerA_offset_candidate = offset_now;
   } else {
+    std::cerr << it_meta->second.pointerA_tmp << std::endl;
     if (it_meta->second.pointerA_offset_candidate == offset_now) {
-      it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
       it_meta->second.pointerA_tmp++;
+      if (it_meta->second.pointerA_tmp >= POINTER_A_THERSHOLD)
+        it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
     } else {
-      if (it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] ==
-          true) {
-        if (it_meta->second.pointerA_tmp > 0)
-          it_meta->second.pointerA_tmp--;
-        else
-          it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
-              true;
-      }
+      if (it_meta->second.pointerA_tmp > 0)
+        it_meta->second.pointerA_tmp/=2;
+      else if (it_meta->second
+                   .maybe_pattern[to_underlying(PATTERN::POINTER_A)] == true)
+        it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
+            true;
     }
   }
   return false;
@@ -426,7 +426,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
   fout << "Total PC\t" << pc2meta.size() << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
     fout << PATTERN_NAME[i] << MY_ALIGN(pcCount[i])
-         << PERCENT(accessCount[i], pc2meta.size()) << std::endl;
+         << PERCENT(pcCount[i], pc2meta.size()) << std::endl;
   }
   fout << "==================================" << std::endl;
 
