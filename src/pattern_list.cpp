@@ -41,6 +41,10 @@ void PatternList::add_trace(unsigned long long int pc,
       next_addr[pc] = pc2meta[it_meta->second.last_pc_sp].lastvalue +
                       it_meta->second.offset_sp;
       break;
+    case PATTERN::POINTER_A:
+      next_addr[pc] =
+          (long long)value + it_meta->second.pointerA_offset_candidate;
+      break;
     default:
       break;
   }
@@ -68,14 +72,11 @@ void PatternList::add_trace(unsigned long long int pc,
         }
       }
       break;
-    case PATTERN::POINTER_A:
-      next_addr[pc] = value + addr - it_meta->second.lastvalue;
-      break;
     default:
       break;
   }
   it_meta->second.pointerA_offset_candidate =
-      (long long)addr - (long long)it_meta->second.lastvalue;
+      (long long)addr - (long long)value;
   it_meta->second.lastaddr_2 = it_meta->second.lastaddr;
   it_meta->second.lastaddr = addr;
   it_meta->second.lastvalue = value;

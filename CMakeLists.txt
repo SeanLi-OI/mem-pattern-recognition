@@ -28,3 +28,8 @@ add_executable(perf-parse
 add_executable(analyze-other
     ${PROJECT_SOURCE_DIR}/src/utils/analyze-other.cpp
 )
+
+add_executable(analyze-gem5-prefetch
+    ${PROJECT_SOURCE_DIR}/src/utils/analyze-gem5-prefetch.cpp
+    ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
+)

@@ -61,7 +61,7 @@ class TraceList {
                          std::deque<TraceNode>>::iterator &it_val);
   bool check_pointerA_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &addr);
+      unsigned long long int &addr, unsigned long long int &value);
   bool check_pointerB_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta);
   bool check_indirect_pattern(

@@ -53,6 +53,7 @@ std::string get_file_line(const char file_name[], int line_no) {
   return s;
 }
 std::string pc2line(char bin_file[], unsigned long long pc) {
+  return "";
   auto ret =
       exec(("addr2line -Cfie " + std::string(bin_file) + " " + int_to_hex(pc))
                .c_str());
