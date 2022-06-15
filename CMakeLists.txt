@@ -1,11 +1,15 @@
 project(mpr)
 cmake_minimum_required (VERSION 3.0)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDEFINED_IN_CMAKELISTS")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/gflags)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-error=maybe-uninitialized -Wno-error=unused-parameter -Wno-error=switch -w -g -O3 -std=c++17 -march=native)
+set(glog_DIR ${PROJECT_SOURCE_DIR}/external/glog/build)
+find_package (glog 0.6.0 REQUIRED)
+
+add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-error=maybe-uninitialized -Wno-error=unused-parameter -Wno-error=switch -w -g -O3 -std=c++17 -march=native -pthread -lpthread)
 
 add_executable(mpr
     ${PROJECT_SOURCE_DIR}/src/main.cpp
@@ -25,6 +29,7 @@ add_executable(perf-parse
     ${PROJECT_SOURCE_DIR}/src/utils/perf-parse.cpp
 )
 target_link_libraries(perf-parse gflags::gflags)
+target_link_libraries(perf-parse glog::glog)
 
 add_executable(analyze-other
     ${PROJECT_SOURCE_DIR}/src/utils/analyze-other.cpp

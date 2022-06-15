@@ -1,32 +1,35 @@
 #!/bin/bash
 
-# pagerank 0 1 3000 2999
-# seq-csr -s 16 -e 16
-
 mpr_dir=/home/lixiang/mem-pattern-recognition
 app_dir=/home/zhoujiapeng
 
 # app=pagerank
-# bin=pagerank
+# bin=${app_dir}/pagerank
 # args="0 1 3000 2999"
 
 # app=seq-csr
-# bin=seq-csr
+# bin=${app_dir}/seq-csr
 # args="-s 16 -e 16"
 
 # app=libquantum
-# bin=libquantum_base.amd64-m64-gcc42-nn
+# bin=${app_dir}/libquantum_base.amd64-m64-gcc42-nn
 # args="100 8"
 
 # app=NPB3
-# bin=NPB3.3.1/NPB3.3-SER/bin/cg.A.x
+# bin=${app_dir}/NPB3.3.1/NPB3.3-SER/bin/cg.A.x
 # args=""
+
+app=health
+bin=/home/lixiang/olden/health/run
+args="8 300 4"
 
 cd ${mpr_dir}
 mkdir -p perf-test/${app}
 cd perf-test/${app}
 
-perf record -g ${app_dir}/${bin} ${args}
+# perf record -g ${bin} ${args}
+sudo perf record -e cache-misses ${bin} ${args}
+sudo chown lixiang:lixiang perf.data
 perf script -D > perf.data.txt
-${mpr_dir}/build/perf-parse ${mpr_dir}/perf-test/${app}/perf.data.txt ${mpr_dir}/perf-test/${app}/roi_raw.txt
-
+# ${mpr_dir}/build/perf-parse -cycle=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt
+${mpr_dir}/build/perf-parse -miss=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt
