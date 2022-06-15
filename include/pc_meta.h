@@ -67,6 +67,7 @@ class PCmeta {  // Metadata for each PC
   long long pattern_confidence[PATTERN_NUM];
   bool is_not_pattern[PATTERN_NUM];
   bool maybe_pattern[PATTERN_NUM];
+  bool maybe_pointer_chase;
   // std::vector<int> inst_id_list;
   PCmeta() {
     lastaddr = lastaddr_2 = 0;
@@ -77,6 +78,7 @@ class PCmeta {  // Metadata for each PC
     pointerA_tmp = 0;
     static_tmp = 0;
     pointerA_offset_candidate = -1;
+    maybe_pointer_chase = 0;
     pattern = PATTERN::OTHER;
     for (int i = 0; i < PATTERN_NUM; i++) {
       pattern_confidence[i] = 0;

@@ -24,6 +24,7 @@ add_executable(pattern2line
 add_executable(perf-parse
     ${PROJECT_SOURCE_DIR}/src/utils/perf-parse.cpp
 )
+target_link_libraries(perf-parse gflags::gflags)
 
 add_executable(analyze-other
     ${PROJECT_SOURCE_DIR}/src/utils/analyze-other.cpp

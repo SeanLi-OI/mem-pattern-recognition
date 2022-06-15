@@ -48,11 +48,14 @@ void PatternList::add_trace(unsigned long long int pc,
     default:
       break;
   }
-  all_count[to_underlying(it_meta->second.pattern)]++;
+  auto pattern_now = to_underlying(it_meta->second.maybe_pointer_chase
+                                       ? PATTERN::POINTER_A
+                                       : it_meta->second.pattern);
+  all_count[pattern_now]++;
   auto it = next_addr.find(pc);
   if (it != next_addr.end()) {
-    total_count[to_underlying(it_meta->second.pattern)]++;
-    if (it->second == addr) hit_count[to_underlying(it_meta->second.pattern)]++;
+    total_count[pattern_now]++;
+    if (it->second == addr) hit_count[pattern_now]++;
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:

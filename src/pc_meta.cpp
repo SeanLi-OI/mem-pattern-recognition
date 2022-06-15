@@ -28,14 +28,15 @@ void PCmeta::input(std::ifstream &in) {
       in >> std::hex >> lastpc;
       break;
     case PATTERN::pointer:
-      in >> std::hex >> lastpc;
+      in >> std::hex >> lastpc >> maybe_pointer_chase;
       break;
     case PATTERN::INDIRECT:
       in >> std::hex >> pc_value.value >> std::hex >> pc_value.addr >>
           std::dec >> pc_value.offset;
       break;
     case PATTERN::STRUCT_POINTER:
-      in >> std::hex >> last_pc_sp >> std::dec >> offset_sp;
+      in >> std::hex >> last_pc_sp >> std::dec >> offset_sp >>
+          maybe_pointer_chase;
       break;
     default:
       break;
@@ -52,7 +53,8 @@ void PCmeta::output(std::ofstream &out) {
       out << " " << std::dec << pointerA_offset_candidate << std::endl;
       break;
     case PATTERN::POINTER_B:
-      out << " " << std::hex << lastpc << std::endl;
+      out << " " << std::hex << lastpc << " " << maybe_pointer_chase
+          << std::endl;
       break;
     case PATTERN::pointer:
       out << " " << std::hex << lastpc << std::endl;
@@ -63,7 +65,7 @@ void PCmeta::output(std::ofstream &out) {
       break;
     case PATTERN::STRUCT_POINTER:
       out << " " << std::hex << last_pc_sp << " " << std::dec << offset_sp
-          << std::endl;
+          << " " << maybe_pointer_chase << std::endl;
       break;
     default:
       out << std::endl;

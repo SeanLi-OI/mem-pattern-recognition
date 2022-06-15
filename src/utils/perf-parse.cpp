@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <gflags/gflags.h>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -5,6 +8,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+DEFINE_string(cycle, "", "cycle perf data");
+DEFINE_string(miss, "", "miss perf data");
+DEFINE_string(output, "hotspot_raw.txt", "output file");
 struct PC_block {
   unsigned long long max_offset;
   unsigned long long counter;
@@ -16,7 +22,27 @@ bool comp(std::pair<unsigned long long, PC_block> a,
           std::pair<unsigned long long, PC_block> b) {
   return a.second.counter > b.second.counter;
 }
-void parse(std::string str) {
+void parse_cycle(std::string str) {
+  std::istringstream in;
+  std::string str_offset;
+  unsigned long long pc, pc_offset, pc_base;
+  in.str(str);
+  in >> std::hex >> pc >> str_offset;
+  if (pc == 0 || str_offset[0] == '[') return;
+  std::size_t pos = str_offset.find("+");
+  if (pos == std::string::npos) return;
+  in.str(str_offset.substr(pos + 1));
+  in >> std::hex >> pc_offset;
+  pc_base = pc - pc_offset;
+  auto it = pc_cnt.find(pc_base);
+  if (it == pc_cnt.end()) {
+    pc_cnt[pc_base] = PC_block(pc_offset);
+  } else {
+    it->second.max_offset = std::max(it->second.max_offset, pc_offset);
+    it->second.counter++;
+  }
+}
+void parse_miss(std::string str) {
   std::istringstream in;
   std::string str_offset;
   unsigned long long pc, pc_offset, pc_base;
@@ -37,22 +63,68 @@ void parse(std::string str) {
   }
 }
 int main(int argc, char* argv[]) {
-  std::ifstream input(argv[1]);
-  std::ofstream output(argv[2]);
-  std::cerr << "Input: " << argv[1] << std::endl;
-  std::cerr << "Output: " << argv[2] << std::endl;
-  for (std::string line; std::getline(input, line);) {
-    // std::cerr << "[" << line[0] << "]" << std::endl;
-    if (line[0] != '\t' && line[0] != ' ') continue;
-    parse(line);
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  if (FLAGS_cycle != "") {
+    std::cout << "=============== Perf Parse Start [Cycle Mode] ==============="
+              << std::endl;
+    std::cout << "Input: " << FLAGS_cycle << std::endl;
+    std::ifstream input(FLAGS_cycle);
+    std::ofstream output(FLAGS_output);
+    if (input.fail()) {
+      std::cerr << "Cannot open cycle file " << FLAGS_cycle << std::endl;
+      assert(false);
+    }
+    if (output.fail()) {
+      std::cerr << "Cannot open output file " << FLAGS_output << std::endl;
+      assert(false);
+    }
+    for (std::string line; std::getline(input, line);) {
+      // std::cerr << "[" << line[0] << "]" << std::endl;
+      if (line[0] != '\t' && line[0] != ' ') continue;
+      parse_cycle(line);
+    }
+    std::vector<std::pair<unsigned long long, PC_block>> elems(pc_cnt.begin(),
+                                                               pc_cnt.end());
+    std::sort(elems.begin(), elems.end(), comp);
+    for (auto& [pc, block] : elems) {
+      output << "0x" << std::hex << pc << " 0x" << std::hex
+             << pc + block.max_offset << " " << std::dec << block.counter
+             << std::endl;
+    }
+    std::cout << "Output: " << FLAGS_output << std::endl;
+    std::cout << "=============== Perf Parse  End  [Cycle Mode] ==============="
+              << std::endl;
   }
-  std::vector<std::pair<unsigned long long, PC_block>> elems(pc_cnt.begin(),
-                                                             pc_cnt.end());
-  std::sort(elems.begin(), elems.end(), comp);
-  for (auto& [pc, block] : elems) {
-    output << "0x" << std::hex << pc << " 0x" << std::hex
-           << pc + block.max_offset << " " << std::dec << block.counter
-           << std::endl;
+  if (FLAGS_miss != "") {
+    std::cout << "============== Perf Parse Start [Miss Mode] ==============="
+              << std::endl;
+    std::cout << "Input: " << FLAGS_miss << std::endl;
+    std::ifstream input(FLAGS_miss);
+    std::ofstream output(FLAGS_output);
+    if (input.fail()) {
+      std::cerr << "Cannot open miss file " << FLAGS_miss << std::endl;
+      assert(false);
+    }
+    if (output.fail()) {
+      std::cerr << "Cannot open output file " << FLAGS_output << std::endl;
+      assert(false);
+    }
+    for (std::string line; std::getline(input, line);) {
+      // std::cerr << "[" << line[0] << "]" << std::endl;
+      if (line[0] != '\t' && line[0] != ' ') continue;
+      parse_miss(line);
+    }
+    std::vector<std::pair<unsigned long long, PC_block>> elems(pc_cnt.begin(),
+                                                               pc_cnt.end());
+    std::sort(elems.begin(), elems.end(), comp);
+    for (auto& [pc, block] : elems) {
+      output << "0x" << std::hex << pc << " 0x" << std::hex
+             << pc + block.max_offset << " " << std::dec << block.counter
+             << std::endl;
+    }
+    std::cout << "Output: " << FLAGS_output << std::endl;
+    std::cout << "=============== Perf Parse  End  [Miss Mode] ==============="
+              << std::endl;
   }
   return 0;
 }
