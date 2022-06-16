@@ -2,7 +2,7 @@
 
 #include "pc_meta.h"
 
-#include <assert.h>
+#include <glog/logging.h>
 
 #include <iostream>
 
@@ -11,10 +11,8 @@ void PCmeta::input(std::ifstream &in) {
     std::string pattern_name;
     in >> pattern_name >> count;
     auto it = pattern_table.find(pattern_name);
-    if (it == pattern_table.end()) {
-      std::cerr << "Cannot find pattern " << pattern_name << std::endl;
-      assert(it != pattern_table.end());
-    }
+    LOG_IF(FATAL, it == pattern_table.end())
+        << "Cannot find pattern " << pattern_name << std::endl;
     pattern = it->second;
   }
   switch (pattern) {
@@ -53,11 +51,11 @@ void PCmeta::output(std::ofstream &out) {
       out << " " << std::dec << pointerA_offset_candidate << std::endl;
       break;
     case PATTERN::POINTER_B:
-      out << " " << std::hex << lastpc << " " << maybe_pointer_chase
-          << std::endl;
+      out << " " << std::hex << lastpc << std::endl;
       break;
     case PATTERN::pointer:
-      out << " " << std::hex << lastpc << std::endl;
+      out << " " << std::hex << lastpc << " " << maybe_pointer_chase
+          << std::endl;
       break;
     case PATTERN::INDIRECT:
       out << " " << std::hex << pc_value.value << " " << std::hex

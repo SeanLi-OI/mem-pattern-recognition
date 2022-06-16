@@ -3,11 +3,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 #include "macro.h"
 #include "perf-parse/perf-parse-common.h"
@@ -17,11 +12,6 @@
 DEFINE_string(cycle, "", "cycle perf data");
 DEFINE_string(miss, "", "miss perf data");
 DEFINE_string(output, "hotspot_raw.txt", "output file");
-
-bool comp(std::pair<unsigned long long, PC_block> a,
-          std::pair<unsigned long long, PC_block> b) {
-  return a.second.counter > b.second.counter;
-}
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -61,11 +51,17 @@ int main(int argc, char* argv[]) {
         << "Cannot open output file " << FLAGS_output << std::endl;
     std::vector<std::pair<unsigned long long, PC_block>> elems(pc_cnt.begin(),
                                                                pc_cnt.end());
-    std::sort(elems.begin(), elems.end(), comp);
+    std::sort(elems.begin(), elems.end(),
+              [](std::pair<unsigned long long, PC_block> a,
+                 std::pair<unsigned long long, PC_block> b) {
+                return a.second.counter > b.second.counter;
+              });
+
     for (auto& [pc, block] : elems) {
       output << "0x" << std::hex << pc << " 0x" << std::hex
              << pc + block.max_offset << " " << PERCENT(block.counter, totalCnt)
-             << " " << MY_ALIGN(block.counter) << block.func_name << std::endl;
+             << " " << std::dec << MY_ALIGN(block.counter) << block.func_name
+             << std::endl;
     }
     LOG(INFO) << "Output: " << FLAGS_output << std::endl;
     LOG(INFO) << "=============== Perf Parse End ["

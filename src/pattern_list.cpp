@@ -2,6 +2,8 @@
 
 #include "pattern_list.h"
 
+#include <glog/logging.h>
+
 #include <fstream>
 
 #include "macro.h"
@@ -24,7 +26,7 @@ void PatternList::add_trace(unsigned long long int pc,
                             unsigned long long int &id, const int inst_id) {
   auto it_meta = pc2meta.find(pc);
   if (it_meta == pc2meta.end()) {
-    std::cerr << "Cannot find PC " << pc << " in pattern list." << std::endl;
+    LOG(WARNING) << "Cannot find PC " << pc << " in pattern list." << std::endl;
     return;
   }
   switch (it_meta->second.pattern) {

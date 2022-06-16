@@ -1,6 +1,7 @@
 // Author: Lixiang
 
 #include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <stdio.h>
 
 #include "macro.h"
@@ -58,6 +59,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
 
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  FLAGS_logtostderr = 1;
   if (FLAGS_analyze == true) {
     std::cout << "====================MPR Start===================="
               << std::endl;

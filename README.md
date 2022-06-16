@@ -4,11 +4,18 @@
 跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）输出模式识别统计信息（5）统计覆盖率与准确率；这一整个pipeline
 ```bash
 git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git
+git submodule update --recursive
+# build Champsim
 cd external/ChampSim
 ./config.sh champsim_config.json
-make # build Champsim
+make
+# build glog
+cd ../glog/
+mkdir build && cd build
+cmake3 ../
+# build union_tracer
 cd ../../tracer
-./make_union_tracer.sh # build union_tracer
+./make_union_tracer.sh
 cd ../
 ./scripts/run_apps.sh
 ```
