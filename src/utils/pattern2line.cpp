@@ -87,6 +87,7 @@ int main(int argc, char* argv[]) {
   std::string pattern;
   int instr_id;
   while (in2 >> std::hex >> pc) {
+    std::cout << std::hex << pc << std::endl;
     pc2meta[pc] = std::make_pair(PCmeta(), 0);
     pc2meta[pc].first.input(in2);
   }

@@ -49,7 +49,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   if (r.len == 0 || r.len > 8) return;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
-  if (ip == 0x4024ee) {
+  if (ip >= 0x4017e0 && ip <= 0x40180b) {
     id++;
     fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
             (unsigned long long)ip, (unsigned long long)r.addr, tmp);

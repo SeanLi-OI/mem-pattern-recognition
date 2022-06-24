@@ -45,3 +45,10 @@ add_executable(analyze-gem5-prefetch
     ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
 )
 target_link_libraries(analyze-gem5-prefetch glog::glog)
+
+add_executable(analyze-gem5-missinfo
+    ${PROJECT_SOURCE_DIR}/src/utils/analyze-gem5-missinfo.cpp
+    ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
+)
+target_link_libraries(analyze-gem5-missinfo glog::glog)
+target_link_libraries(analyze-gem5-missinfo gflags::gflags)

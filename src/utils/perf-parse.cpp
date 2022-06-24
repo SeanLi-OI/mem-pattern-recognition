@@ -11,7 +11,8 @@
 
 DEFINE_string(cycle, "", "cycle perf data");
 DEFINE_string(miss, "", "miss perf data");
-DEFINE_string(output, "hotspot_raw.txt", "output file");
+DEFINE_string(output, "", "output file");
+DEFINE_string(roi, "", "roi file");
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -64,6 +65,17 @@ int main(int argc, char* argv[]) {
              << std::endl;
     }
     LOG(INFO) << "Output: " << FLAGS_output << std::endl;
+    if (FLAGS_roi != "") {
+      std::ofstream roi(FLAGS_roi);
+      LOG_IF(FATAL, roi.fail())
+          << "Cannot open roi file " << FLAGS_roi << std::endl;
+      for (auto& [pc, block] : elems) {
+        if (block.counter * 10 < totalCnt) break;
+        roi << "0x" << std::hex << pc << " 0x" << std::hex
+            << pc + block.max_offset << std::endl;
+      }
+      LOG(INFO) << "ROI: " << FLAGS_output << std::endl;
+    }
     LOG(INFO) << "=============== Perf Parse End ["
               << (FLAGS_cycle != "" ? "Cycle" : "Miss")
               << " Mode] ===============" << std::endl;

@@ -128,6 +128,23 @@ INT32 Usage() {
 /* ===================================================================== */
 
 void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
+  // reset the current instruction
+  curr_instr.ip = (unsigned long long int)ip;
+  std::cerr << std::hex << curr_instr.ip << std::endl;
+
+  curr_instr.is_branch = 0;
+  curr_instr.branch_taken = 0;
+
+  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
+    curr_instr.destination_registers[i] = 0;
+    curr_instr.destination_memory[i] = 0;
+  }
+
+  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
+    curr_instr.source_registers[i] = 0;
+    curr_instr.source_memory[i] = 0;
+  }
+
   if (tracing_on) {
     // if ((unsigned long long int)ip > end_ip) tracing_on = false;
     bool flag = true;
@@ -165,21 +182,6 @@ void BeginInstruction(VOID *ip, UINT32 op_code, VOID *opstring) {
   //       tracing_on = false;
   //   }
 
-  // reset the current instruction
-  curr_instr.ip = (unsigned long long int)ip;
-
-  curr_instr.is_branch = 0;
-  curr_instr.branch_taken = 0;
-
-  for (int i = 0; i < NUM_INSTR_DESTINATIONS; i++) {
-    curr_instr.destination_registers[i] = 0;
-    curr_instr.destination_memory[i] = 0;
-  }
-
-  for (int i = 0; i < NUM_INSTR_SOURCES; i++) {
-    curr_instr.source_registers[i] = 0;
-    curr_instr.source_memory[i] = 0;
-  }
   trace_this = false;
 }
 

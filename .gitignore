@@ -11,3 +11,5 @@ result/
 build/
 Makefile(deprecated)
 perf-test/
+perf-test(deprecated)/
+asm/
