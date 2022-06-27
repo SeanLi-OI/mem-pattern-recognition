@@ -43,6 +43,12 @@ class TraceList {
 #ifdef ENABLE_TIMER
   unsigned long long int total_time;
 #endif
+  std::unordered_map<unsigned long long int, unsigned long long int> region_cnt;
+#ifndef ENABLE_HOTREGION_V1
+  std::unordered_map<unsigned long long int, unsigned long long int> region_ht;
+  std::set<unsigned long long int> hot_region_list;
+#endif
+  unsigned long long hot_region_size;
 
   std::ofstream out;
 
@@ -51,7 +57,7 @@ class TraceList {
 
   bool check_static_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &addr);
+      unsigned long long int &addr, unsigned long long int &value);
   bool check_stride_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
@@ -61,7 +67,8 @@ class TraceList {
                          std::deque<TraceNode>>::iterator &it_val);
   bool check_pointerA_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-      unsigned long long int &addr, unsigned long long int &value);
+      unsigned long long int &addr, unsigned long long int &value,
+      bool &isWrite);
   bool check_pointerB_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta);
   bool check_indirect_pattern(
@@ -70,13 +77,16 @@ class TraceList {
   bool check_struct_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
+  void check_hot_region(unsigned long long int &region_id,
+                        const unsigned long long &inst_id);
 
  public:
-  TraceList() {
+  TraceList(unsigned long long hr_size) {
     for (int i = 0; i < PATTERN_NUM; i++) pattern_count[i] = 0;
 #ifdef ENABLE_TIMER
     total_time = 0;
 #endif
+    hot_region_size = hr_size;
   }
   void add_outfile(const char filename[]) {
     out.open(filename);
@@ -84,8 +94,9 @@ class TraceList {
   }
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
-                 unsigned long long int &id, const int inst_id);
-  void printStats(unsigned long long totalCnt, const char filename[]);
+                 unsigned long long int &id, const unsigned long long inst_id);
+  void printStats(unsigned long long totalCnt, const char filename[],
+                  const char hot_region_file[]);
 };
 
 #endif

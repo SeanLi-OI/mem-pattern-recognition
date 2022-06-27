@@ -16,7 +16,9 @@ DEFINE_string(trace, "mpr.trace.gz", "mpr trace file");
 DEFINE_string(stat, "mpr.stat", "stat file");
 DEFINE_string(pattern, "mpr.pattern", "pattern file");
 DEFINE_string(result, "mpr.res", "validate result");
-DEFINE_uint64(len, 0, "trace len");
+DEFINE_string(hotregion, "mpr.hotregion", "hotregion result");
+DEFINE_int64(len, -1, "trace len");
+DEFINE_uint64(hrsize, 2048, "Size of hot region");
 
 void add_trace(TraceList &traceList, unsigned long long &id,
                unsigned long long int ip, MemRecord &r, bool isWrite,
@@ -45,14 +47,18 @@ void valid_trace(PatternList &patternList, unsigned long long &id,
 }
 void debug_trace(TraceList &traceList, unsigned long long &id,
                  unsigned long long int ip, MemRecord &r, bool isWrite,
-                 const int inst_id) {
+                 const unsigned long long int inst_id) {
   if (r.len == 0 || r.len > 8) return;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
-  if (ip >= 0x4017e0 && ip <= 0x40180b) {
+  // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
+  if (ip == 0x401878) {
+    // if (inst_id>=6856070&&inst_id<=6856210) {
+    // if (r.addr == 0x6f9cb0) {
     id++;
-    fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
-            (unsigned long long)ip, (unsigned long long)r.addr, tmp);
+    fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' : 'R',
+            (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
+            inst_id);
     //     traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   }
 }
@@ -67,7 +73,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Writing stats to " << FLAGS_stat << std::endl;
     std::cout << "Writing pattern to " << FLAGS_pattern << std::endl;
     auto traces = get_tracereader(FLAGS_trace, 1, 0);
-    auto traceList = TraceList();
+    auto traceList = TraceList(FLAGS_hrsize);
     unsigned long long id = 0;
     unsigned long long inst_id = 0;
     bool isend = false;
@@ -94,7 +100,7 @@ int main(int argc, char *argv[]) {
       if (id == FLAGS_len && FLAGS_len != 0) break;
 #endif
     }
-    traceList.printStats(id, FLAGS_stat.c_str());
+    traceList.printStats(id, FLAGS_stat.c_str(), FLAGS_hotregion.c_str());
     std::cout << "=====================MPR End====================="
               << std::endl;
   }
@@ -138,9 +144,9 @@ int main(int argc, char *argv[]) {
   if (FLAGS_debug == true) {
     std::cout << "=================Debug Start==================" << std::endl;
     std::cout << "Reading trace from " << FLAGS_trace << std::endl;
-    std::cout << "Reading pattern to " << FLAGS_pattern << std::endl;
+    //     std::cout << "Reading pattern to " << FLAGS_pattern << std::endl;
     auto traces = get_tracereader(FLAGS_trace, 1, 0);
-    auto traceList = TraceList();
+    auto traceList = TraceList(FLAGS_hrsize);
     unsigned long long id = 0;
     int inst_id = 0;
     bool isend = false;
@@ -165,7 +171,7 @@ int main(int argc, char *argv[]) {
 #endif
       // if (inst.ip == 0x40318f) std::cerr << std::endl;
     }
-    traceList.printStats(id, FLAGS_stat.c_str());
+    traceList.printStats(id, FLAGS_stat.c_str(), FLAGS_hotregion.c_str());
     std::cout << "==================Debug End===================" << std::endl;
   }
   return 0;

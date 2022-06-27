@@ -89,6 +89,7 @@ void PatternList::add_trace(unsigned long long int pc,
 
 void PatternList::printStats(unsigned long long totalCnt,
                              const char filename[]) {
+  LOG_IF(ERROR, totalCnt == 0) << "Read 0 trace from tracefile" << std::endl;
   std::ofstream out(filename);
   unsigned long long hit_sum = 0, total_sum = 0;
   out << "=================================================" << std::endl;

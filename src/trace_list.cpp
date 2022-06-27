@@ -2,6 +2,8 @@
 
 #include "trace_list.h"
 
+#include <glog/logging.h>
+
 #include "macro.h"
 
 inline long long int abs_sub(unsigned long long int a,
@@ -21,15 +23,15 @@ void TraceList::add_next(std::deque<TraceNode> &L, TraceNode tn) {
 
 bool TraceList::check_static_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-    unsigned long long int &addr) {
-  // if (it_meta->first == 0x4069e1)
+    unsigned long long int &addr, unsigned long long int &value) {
+  // if (it_meta->first == 0x4019d6)
   //   std::cerr << std::hex << addr << " " << std::hex <<
   //   it_meta->second.lastaddr
   //             << " " << std::dec << it_meta->second.static_tmp << " "
   //             <<
   //             it_meta->second.is_not_pattern[to_underlying(PATTERN::STATIC)]
   //             << std::endl;
-  if (it_meta->second.lastaddr == addr) {
+  if (it_meta->second.lastaddr == addr || it_meta->second.lastvalue == value) {
     it_meta->second.static_tmp++;
     if (it_meta->second.static_tmp > STATIC_THERSHOLD) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::STATIC)] = true;
@@ -106,10 +108,12 @@ bool TraceList::check_pointer_pattern(
 
 bool TraceList::check_pointerA_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
-    unsigned long long int &addr, unsigned long long int &value) {
-  // long long offset_now = (long long)addr - (long
-  // long)it_meta->second.lastvalue;
+    unsigned long long int &addr, unsigned long long int &value,
+    bool &isWrite) {
+  //
   long long offset_now = (long long)addr - (long long)value;
+  if (!isWrite)
+    offset_now = (long long)addr - (long long)it_meta->second.lastvalue;
   if (addr == it_meta->second.lastaddr) return false;
   // if (it_meta->first == 0x40484f) {
   // std::cerr << offset_now << " " << it_meta->second.pointerA_offset_candidate
@@ -266,10 +270,45 @@ bool TraceList::check_struct_pointer_pattern(
   return false;
 }
 
+#define HOT_REGION_INST_THRESHOLD 32
+#define HOT_REGION_LEN_THRESHOLD \
+  (hot_region_size / HOT_REGION_INST_THRESHOLD / 4)
+void TraceList::check_hot_region(unsigned long long int &region_id,
+                                 const unsigned long long &inst_id) {
+#ifdef ENABLE_HOTREGION_V1
+  auto it = region_cnt.find(region_id);
+  if (it == region_cnt.end()) {
+    region_cnt[region_id] = 1;
+  } else {
+    it->second++;
+  }
+#else
+  auto it = region_ht.find(region_id);
+  if (it == region_ht.end()) {
+    region_ht[region_id] = inst_id;
+  } else {
+    if (inst_id - it->second < HOT_REGION_INST_THRESHOLD) {
+      auto it2 = region_cnt.find(region_id);
+      if (it2 == region_cnt.end()) {
+        region_cnt[region_id] = 1;
+      } else {
+        it2->second++;
+        if (it2->second >= HOT_REGION_LEN_THRESHOLD)
+          hot_region_list.insert(region_id);
+      }
+    } else {
+      auto it2 = region_cnt.find(region_id);
+      if (it2 != region_cnt.end()) it2->second = 0;
+    }
+  }
+#endif
+}
+
 void TraceList::add_trace(unsigned long long int pc,
                           unsigned long long int addr,
                           unsigned long long int value, bool isWrite,
-                          unsigned long long int &id, const int inst_id) {
+                          unsigned long long int &id,
+                          const unsigned long long inst_id) {
   TraceNode tn(pc, addr, value, isWrite, id);
   auto it_val = value2trace.find(addr);
   {  // value2trace
@@ -295,7 +334,7 @@ void TraceList::add_trace(unsigned long long int pc,
 #endif
     if (!it_meta->second.confirm) {
       for (bool X = true; X; X = false) {
-        if (check_static_pattern(it_meta, addr)) {
+        if (check_static_pattern(it_meta, addr, value)) {
           // if (!it_meta->second.is_not_static) {
           //   it_meta->second
           //       .pattern_confidence[to_underlying(PATTERN::STATIC)]++;
@@ -323,7 +362,7 @@ void TraceList::add_trace(unsigned long long int pc,
           //   }
           // }
         }
-        if (check_pointerA_pattern(it_meta, addr, value)) {
+        if (check_pointerA_pattern(it_meta, addr, value, isWrite)) {
           // it_meta->second.pattern = PATTERN::POINTER_A;
           // it_meta->second.confirm = true;
           // break;
@@ -368,9 +407,13 @@ void TraceList::add_trace(unsigned long long int pc,
   // if (tn.value < 2147483647) {
   add_next(traceHistory, tn);
   // }
+  auto region_id = (unsigned long long)addr / hot_region_size;
+  check_hot_region(region_id, inst_id);
 }
 
-void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
+void TraceList::printStats(unsigned long long totalCnt, const char filename[],
+                           const char hot_region_file[]) {
+  LOG_IF(ERROR, totalCnt == 0) << "Read 0 trace from tracefile" << std::endl;
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
   for (auto &[pc, meta] : pc2meta) {
@@ -415,9 +458,11 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
     }
   }
   bool flag = true;
+  LOG(INFO) << "Start Pointer Chase Correct Cycle" << std::endl;
   while (flag) {
     flag = false;
     for (auto &[pc, meta] : pc2meta) {
+      if (meta.maybe_pointer_chase == true) continue;
       if (meta.pattern == PATTERN::pointer) {
         if (pc2meta[meta.lastpc].pattern == PATTERN::POINTER_A ||
             pc2meta[meta.lastpc].maybe_pointer_chase) {
@@ -434,6 +479,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
       }
     }
   }
+  LOG(INFO) << "End Pointer Chase Correct Cycle" << std::endl;
   for (auto &[pc, meta] : pc2meta) {
     if (meta.maybe_pointer_chase) {
       accessCount[to_underlying(PATTERN::POINTER_A)] += meta.count;
@@ -464,6 +510,28 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[]) {
          << PERCENT(pcCount[i], pc2meta.size()) << std::endl;
   }
   fout << "==================================" << std::endl;
+
+  std::ofstream hrout(hot_region_file);
+#ifdef ENABLE_HOTREGION_V1
+  auto region_cnt_v =
+      std::vector<std::pair<unsigned long long, unsigned long long>>(
+          region_cnt.begin(), region_cnt.end());
+  std::sort(region_cnt_v.begin(), region_cnt_v.end(),
+            [&](std::pair<unsigned long long, unsigned long long> A,
+                std::pair<unsigned long long, unsigned long long> B) {
+              return A.second > B.second;
+            });
+  for (auto &[k, v] : region_cnt_v) {
+    hrout << std::hex << k << " " << std::hex << (k + hot_region_size) << " "
+          << std::dec << MY_ALIGN(v) << PERCENT(v, totalCnt) << std::endl;
+    if (v * 100 < totalCnt) break;
+  }
+#else
+  for (auto &region : hot_region_list) {
+    hrout << std::hex << region << " " << std::hex << (region + hot_region_size)
+          << std::endl;
+  }
+#endif
 
 #ifdef ENABLE_TIMER
   fout << "Total time: " << total_time / 1000000000 << "s "
