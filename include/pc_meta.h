@@ -31,8 +31,10 @@ class PCmeta {  // Metadata for each PC
     unsigned long long int pc;
     long long offset;
     int confidence;
+    bool flag;
     struct_pointer_meta() {}
     struct_pointer_meta(unsigned long long int _p) : pc(_p) {
+      flag = 0;
       offset = 0;
       confidence = 0;
     }

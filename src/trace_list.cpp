@@ -110,10 +110,13 @@ bool TraceList::check_pointerA_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr, unsigned long long int &value,
     bool &isWrite) {
-  //
   long long offset_now = (long long)addr - (long long)value;
-  if (!isWrite)
+  if (!isWrite) {
+    if (it_meta->second.lastvalue == 0) return false;
     offset_now = (long long)addr - (long long)it_meta->second.lastvalue;
+  } else {
+    if (value == 0) return false;
+  }
   if (addr == it_meta->second.lastaddr) return false;
   // if (it_meta->first == 0x40484f) {
   // std::cerr << offset_now << " " << it_meta->second.pointerA_offset_candidate
@@ -229,24 +232,35 @@ bool TraceList::check_struct_pointer_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   std::unordered_map<unsigned long long int, PCmeta::struct_pointer_meta> tmp;
+  bool flag = false;
   for (auto it_trace = traceHistory.rbegin(); it_trace != traceHistory.rend();
        it_trace++) {
     auto &trace = *it_trace;
-    if (trace.pc == it_meta->first) break;  // find loop
-
+    if (trace.pc == it_meta->first) {
+      break;  // find loop
+    }
     auto it = it_meta->second.struct_pointer_candidate.find(trace.pc);
     long long offset_now = abs_sub(addr, trace.value);
-    if (offset_now == 0) continue;
+    if (offset_now == 0 || offset_now >= 32768) continue;
     if (it_meta->second.meeted_pc_sp.find(trace.pc) !=
         it_meta->second.meeted_pc_sp.end()) {
       if (it != it_meta->second.struct_pointer_candidate.end()) {
+        if (!flag) {
+          it->second.flag = 1;
+          flag = true;
+        }
+        // if (trace.pc == 0x401830 && it_meta->first == 0x40183e) {
+        //   LOG(INFO) << offset_now << " " << it->second.offset << std::endl;
+        // }
         if (it->second.offset == 0) {
           it->second.offset = offset_now;
           tmp[trace.pc] = it->second;
+          tmp[trace.pc].flag = 0;
         } else {
           if (offset_now == it->second.offset) {
             it->second.confidence++;
             tmp[trace.pc] = it->second;
+            tmp[trace.pc].flag = 0;
           }
           if (it->second.confidence >= STRUCT_POINTER_THERSHOLD) {
             it_meta->second.last_pc_sp = trace.pc;
@@ -261,11 +275,31 @@ bool TraceList::check_struct_pointer_pattern(
       it_meta->second.meeted_pc_sp.insert(trace.pc);
     }
   }
+  for (auto &t : it_meta->second.struct_pointer_candidate) {
+    // LOG(INFO) << std::hex << t.first << " " << t.second.flag << std::endl;
+    auto it = tmp.find(t.first);
+    if (!t.second.flag && it == tmp.end()) {
+      t.second.flag = 0;
+      tmp[t.first] = t.second;
+    }
+  }
   if (tmp.empty() &&
       it_meta->second.maybe_pattern[to_underlying(PATTERN::STRUCT_POINTER)] ==
           true)
     it_meta->second.is_not_pattern[to_underlying(PATTERN::STRUCT_POINTER)] =
         true;
+  // if (it_meta->first == 0x40183e) {
+  //   for (auto &t : tmp) {
+  //     LOG(INFO) << std::hex << t.first << std::endl;
+  //   }
+  //   LOG(INFO)
+  //       << "Fin "
+  //       <<
+  //       it_meta->second.maybe_pattern[to_underlying(PATTERN::STRUCT_POINTER)]
+  //       << it_meta->second
+  //              .is_not_pattern[to_underlying(PATTERN::STRUCT_POINTER)]
+  //       << std::endl;
+  // }
   it_meta->second.struct_pointer_candidate = tmp;
   return false;
 }

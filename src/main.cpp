@@ -52,14 +52,14 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
-  if (ip == 0x401878) {
+  if (ip == 0x401821 ||ip==0x401822 || ip == 0x401830 || ip == 0x40183e) {
     // if (inst_id>=6856070&&inst_id<=6856210) {
     // if (r.addr == 0x6f9cb0) {
     id++;
     fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' : 'R',
             (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
             inst_id);
-    //     traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+        traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   }
 }
 
@@ -171,7 +171,8 @@ int main(int argc, char *argv[]) {
 #endif
       // if (inst.ip == 0x40318f) std::cerr << std::endl;
     }
-    traceList.printStats(id, FLAGS_stat.c_str(), FLAGS_hotregion.c_str());
+    //     traceList.printStats(id, FLAGS_stat.c_str(),
+    //     FLAGS_hotregion.c_str());
     std::cout << "==================Debug End===================" << std::endl;
   }
   return 0;
