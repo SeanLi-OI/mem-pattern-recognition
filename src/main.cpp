@@ -4,6 +4,8 @@
 #include <glog/logging.h>
 #include <stdio.h>
 
+#include <filesystem>
+
 #include "macro.h"
 #include "pattern_list.h"
 #include "trace_list.h"
@@ -52,15 +54,20 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
-  if (ip == 0x401821 ||ip==0x401822 || ip == 0x401830 || ip == 0x40183e) {
+  if (ip == 0x401821 || ip == 0x401822 || ip == 0x401830 || ip == 0x40183e) {
     // if (inst_id>=6856070&&inst_id<=6856210) {
     // if (r.addr == 0x6f9cb0) {
     id++;
     fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' : 'R',
             (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
             inst_id);
-        traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+    traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   }
+}
+
+inline void transAbsolute(std::string &p) {
+  if (!((std::filesystem::path)p).is_absolute())
+    p = std::string(std::filesystem::current_path()) + "/" + p;
 }
 
 int main(int argc, char *argv[]) {
@@ -69,6 +76,9 @@ int main(int argc, char *argv[]) {
   if (FLAGS_analyze == true) {
     std::cout << "====================MPR Start===================="
               << std::endl;
+    transAbsolute(FLAGS_trace);
+    transAbsolute(FLAGS_stat);
+    transAbsolute(FLAGS_pattern);
     std::cout << "Reading trace from " << FLAGS_trace << std::endl;
     std::cout << "Writing stats to " << FLAGS_stat << std::endl;
     std::cout << "Writing pattern to " << FLAGS_pattern << std::endl;
@@ -107,6 +117,9 @@ int main(int argc, char *argv[]) {
   if (FLAGS_validate == true) {
     std::cout << "=================Validate Start=================="
               << std::endl;
+    transAbsolute(FLAGS_trace);
+    transAbsolute(FLAGS_pattern);
+    transAbsolute(FLAGS_result);
     std::cout << "Reading trace from " << FLAGS_trace << std::endl;
     std::cout << "Reading pattern to " << FLAGS_pattern << std::endl;
     std::cout << "Writing result to " << FLAGS_result << std::endl;
@@ -143,6 +156,7 @@ int main(int argc, char *argv[]) {
   }
   if (FLAGS_debug == true) {
     std::cout << "=================Debug Start==================" << std::endl;
+    transAbsolute(FLAGS_trace);
     std::cout << "Reading trace from " << FLAGS_trace << std::endl;
     //     std::cout << "Reading pattern to " << FLAGS_pattern << std::endl;
     auto traces = get_tracereader(FLAGS_trace, 1, 0);
