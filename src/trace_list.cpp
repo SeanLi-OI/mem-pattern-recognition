@@ -527,13 +527,13 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
   fout << "==================================" << std::endl;
   fout << "Total Access\t" << totalCnt << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
-    fout << PATTERN_NAME[i] << MY_ALIGN(accessCount[i])
+    fout << MY_ALIGN_STR(PATTERN_NAME[i]) << MY_ALIGN(accessCount[i])
          << PERCENT(accessCount[i], totalCnt) << std::endl;
   }
   fout << "==================================" << std::endl;
   fout << "Total PC\t" << pc2meta.size() << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
-    fout << PATTERN_NAME[i] << MY_ALIGN(pcCount[i])
+    fout << MY_ALIGN_STR(PATTERN_NAME[i]) << MY_ALIGN(pcCount[i])
          << PERCENT(pcCount[i], pc2meta.size()) << std::endl;
   }
   fout << "==================================" << std::endl;
