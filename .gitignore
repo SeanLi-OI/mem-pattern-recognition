@@ -13,3 +13,5 @@ Makefile(deprecated)
 perf-test/
 perf-test(deprecated)/
 asm/
+syf-test/
+tmp/

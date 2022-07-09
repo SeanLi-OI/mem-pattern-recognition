@@ -5,10 +5,10 @@
 
 const int PATTERN_NUM = 10;
 const std::string PATTERN_NAME[] = {
-    "fresh\t\t",   "struct_pointer\t", "static\t\t",      "stride\t\t",
-    "pointer\t\t", "pointer_chase\t",  "pointer_array\t", "indirect\t",
-    "chain\t\t",   "other\t\t"};  // Make sure PATTERN_NAME has same order with
-                                  // PATTERN
+    "fresh",   "struct_pointer", "static",        "stride",
+    "pointer", "pointer_chase",  "pointer_array", "indirect",
+    "chain",   "other"};  // Make sure PATTERN_NAME has same order with
+                          // PATTERN
 enum PATTERN : uint16_t {
   FRESH,
   STRUCT_POINTER,

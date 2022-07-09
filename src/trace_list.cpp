@@ -4,7 +4,7 @@
 
 #include <glog/logging.h>
 
-#include "macro.h"
+#include "utils/macro.h"
 
 inline long long int abs_sub(unsigned long long int a,
                              unsigned long long int b) {
@@ -231,7 +231,8 @@ bool TraceList::check_indirect_pattern(
 bool TraceList::check_struct_pointer_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
-  std::unordered_map<unsigned long long int, PCmeta::struct_pointer_meta> tmp;
+  std::unordered_map<unsigned long long int, PCmeta::struct_pointer_meta> tmp(
+      it_meta->second.struct_pointer_candidate);
   bool flag = false;
   for (auto it_trace = traceHistory.rbegin(); it_trace != traceHistory.rend();
        it_trace++) {
@@ -246,7 +247,7 @@ bool TraceList::check_struct_pointer_pattern(
         it_meta->second.meeted_pc_sp.end()) {
       if (it != it_meta->second.struct_pointer_candidate.end()) {
         if (!flag) {
-          it->second.flag = 1;
+          tmp.erase(tmp.find(trace.pc));
           flag = true;
         }
         // if (trace.pc == 0x401830 && it_meta->first == 0x40183e) {
@@ -255,12 +256,10 @@ bool TraceList::check_struct_pointer_pattern(
         if (it->second.offset == 0) {
           it->second.offset = offset_now;
           tmp[trace.pc] = it->second;
-          tmp[trace.pc].flag = 0;
         } else {
           if (offset_now == it->second.offset) {
             it->second.confidence++;
             tmp[trace.pc] = it->second;
-            tmp[trace.pc].flag = 0;
           }
           if (it->second.confidence >= STRUCT_POINTER_THERSHOLD) {
             it_meta->second.last_pc_sp = trace.pc;
@@ -273,14 +272,6 @@ bool TraceList::check_struct_pointer_pattern(
     } else {
       tmp[trace.pc] = PCmeta::struct_pointer_meta(trace.pc);
       it_meta->second.meeted_pc_sp.insert(trace.pc);
-    }
-  }
-  for (auto &t : it_meta->second.struct_pointer_candidate) {
-    // LOG(INFO) << std::hex << t.first << " " << t.second.flag << std::endl;
-    auto it = tmp.find(t.first);
-    if (!t.second.flag && it == tmp.end()) {
-      t.second.flag = 0;
-      tmp[t.first] = t.second;
     }
   }
   if (tmp.empty() &&
@@ -441,8 +432,10 @@ void TraceList::add_trace(unsigned long long int pc,
   // if (tn.value < 2147483647) {
   add_next(traceHistory, tn);
   // }
-  auto region_id = (unsigned long long)addr / hot_region_size;
-  check_hot_region(region_id, inst_id);
+  if (enable_hotregion_) {
+    auto region_id = (unsigned long long)addr / hot_region_size;
+    check_hot_region(region_id, inst_id);
+  }
 }
 
 void TraceList::printStats(unsigned long long totalCnt, const char filename[],
@@ -544,28 +537,29 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
          << PERCENT(pcCount[i], pc2meta.size()) << std::endl;
   }
   fout << "==================================" << std::endl;
-
-  std::ofstream hrout(hot_region_file);
+  if (enable_hotregion_) {
+    std::ofstream hrout(hot_region_file);
 #ifdef ENABLE_HOTREGION_V1
-  auto region_cnt_v =
-      std::vector<std::pair<unsigned long long, unsigned long long>>(
-          region_cnt.begin(), region_cnt.end());
-  std::sort(region_cnt_v.begin(), region_cnt_v.end(),
-            [&](std::pair<unsigned long long, unsigned long long> A,
-                std::pair<unsigned long long, unsigned long long> B) {
-              return A.second > B.second;
-            });
-  for (auto &[k, v] : region_cnt_v) {
-    hrout << std::hex << k << " " << std::hex << (k + hot_region_size) << " "
-          << std::dec << MY_ALIGN(v) << PERCENT(v, totalCnt) << std::endl;
-    if (v * 100 < totalCnt) break;
-  }
+    auto region_cnt_v =
+        std::vector<std::pair<unsigned long long, unsigned long long>>(
+            region_cnt.begin(), region_cnt.end());
+    std::sort(region_cnt_v.begin(), region_cnt_v.end(),
+              [&](std::pair<unsigned long long, unsigned long long> A,
+                  std::pair<unsigned long long, unsigned long long> B) {
+                return A.second > B.second;
+              });
+    for (auto &[k, v] : region_cnt_v) {
+      hrout << std::hex << k << " " << std::hex << (k + hot_region_size) << " "
+            << std::dec << MY_ALIGN(v) << PERCENT(v, totalCnt) << std::endl;
+      if (v * 100 < totalCnt) break;
+    }
 #else
-  for (auto &region : hot_region_list) {
-    hrout << std::hex << region << " " << std::hex << (region + hot_region_size)
-          << std::endl;
-  }
+    for (auto &region : hot_region_list) {
+      hrout << std::hex << region << " " << std::hex
+            << (region + hot_region_size) << std::endl;
+    }
 #endif
+  }
 
 #ifdef ENABLE_TIMER
   fout << "Total time: " << total_time / 1000000000 << "s "

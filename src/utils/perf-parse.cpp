@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <fstream>
 
-#include "macro.h"
+#include "utils/macro.h"
 #include "perf-parse/perf-parse-common.h"
 #include "perf-parse/perf-parse-cycle.h"
 #include "perf-parse/perf-parse-miss.h"

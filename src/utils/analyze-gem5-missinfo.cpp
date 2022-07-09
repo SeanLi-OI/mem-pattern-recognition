@@ -5,98 +5,95 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "pc_meta.h"
-
-namespace analyze_gem5_missinfo {
+#include "utils/macro.h"
+#include "utils/miss_info.h"
+#include "utils/trans_abs_path.h"
 
 DEFINE_string(pattern, "", "pattern file");
 DEFINE_string(missinfo, "", "gem5 missinfo file");
+DEFINE_string(base, "", "gem5 missinfo file (base)");
 
-std::map<unsigned long long, PCmeta> pc2meta;
-std::vector<unsigned long long> cnt(PATTERN_NUM, 0);
-
-unsigned long long readhex(std::string s) {
-  unsigned long long n = 0;
-  for (int i = 0; i < s.length(); i++) {
-    if (s[i] >= 'a' && s[i] <= 'f')
-      n = n * 16 + s[i] - 'a' + 10;
-    else if (s[i] >= '0' && s[i] <= '9')
-      n = n * 16 + s[i] - '0';
-    else
-      break;
+void compare_missinfo(std::unique_ptr<MissInfo> missinfo,
+                      std::unique_ptr<MissInfo> base) {
+  std::cout << "IPC: " << missinfo->ipc
+            << PERCENT_WITH_OP(missinfo->ipc - base->ipc, base->ipc)
+            << std::endl;
+  std::cout << "Pattern         MissCount                   HitCount           "
+               "         TotalCount"
+            << std::endl;
+  unsigned long long misses = 0, hits = 0, total = 0;
+  unsigned long long misses_base = 0, hits_base = 0, total_base = 0;
+  for (int i = 0; i < PATTERN_NUM; i++) {
+    std::cout << MY_ALIGN_STR(PATTERN_NAME[i]) << " "
+              << MY_ALIGN(missinfo->miss_cnt[i])
+              << MY_ALIGN_STR(DIFF(missinfo->miss_cnt[i], base->miss_cnt[i]))
+              << " " << MY_ALIGN(missinfo->hit_cnt[i])
+              << MY_ALIGN_STR(DIFF(missinfo->hit_cnt[i], base->hit_cnt[i]))
+              << " " << MY_ALIGN(missinfo->total_cnt[i])
+              << MY_ALIGN_STR(DIFF(missinfo->total_cnt[i], base->total_cnt[i]))
+              << std::endl;
+    misses += missinfo->miss_cnt[i];
+    hits += missinfo->hit_cnt[i];
+    total += missinfo->total_cnt[i];
+    misses_base += base->miss_cnt[i];
+    hits_base += base->hit_cnt[i];
+    total_base += base->total_cnt[i];
   }
-  return n;
+  std::cout << MY_ALIGN_STR("total") << " " << MY_ALIGN(misses)
+            << MY_ALIGN_STR(DIFF(misses, misses_base)) << " " << MY_ALIGN(hits)
+            << MY_ALIGN_STR(DIFF(hits, hits_base)) << " " << MY_ALIGN(total)
+            << MY_ALIGN_STR(DIFF(total, total_base)) << std::endl;
 }
-
-unsigned long long readdec(std::string s) {
-  unsigned long long n = 0;
-  int i;
-  for (i = 0; i < s.length(); i++) {
-    if (s[i] >= '0' && s[i] <= '9') {
-      break;
-    }
-  }
-  LOG_IF(ERROR, i >= s.length())
-      << "Error when parse decimal number from " << s << std::endl;
-  for (; i < s.length() && s[i] >= '0' && s[i] <= '9'; i++) {
-    n = n * 10 + s[i] - '0';
-  }
-  return n;
-}
-}  // namespace analyze_gem5_missinfo
 
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   FLAGS_logtostderr = 1;
-  LOG_IF(ERROR, analyze_gem5_missinfo::FLAGS_pattern == "")
+  LOG_IF(ERROR, FLAGS_pattern == "")
       << "Require missinfo file by -pattern=" << std::endl;
-  std::ifstream fin1(analyze_gem5_missinfo::FLAGS_pattern);
+  transAbsolute(FLAGS_pattern);
+  std::ifstream fin1(FLAGS_pattern);
   LOG_IF(ERROR, !fin1.good())
-      << "Cannot open pattern file " << analyze_gem5_missinfo::FLAGS_pattern
-      << std::endl;
-  LOG_IF(ERROR, analyze_gem5_missinfo::FLAGS_missinfo == "")
+      << "Cannot open pattern file " << FLAGS_pattern << std::endl;
+  LOG_IF(ERROR, FLAGS_missinfo == "")
       << "Require missinfo file by -missinfo=" << std::endl;
-  std::ifstream fin2(analyze_gem5_missinfo::FLAGS_missinfo);
-  LOG_IF(ERROR, !fin2.good())
-      << "Cannot open missinfo file " << analyze_gem5_missinfo::FLAGS_missinfo
-      << std::endl;
+  transAbsolute(FLAGS_missinfo);
+  std::shared_ptr<std::ifstream> fin2 =
+      std::make_shared<std::ifstream>(FLAGS_missinfo);
+  LOG_IF(ERROR, !fin2->good())
+      << "Cannot open missinfo file " << FLAGS_missinfo << std::endl;
   std::string str;
   unsigned long long pc;
-  unsigned long long count;
-  std::cout << "Read pattern info from " << analyze_gem5_missinfo::FLAGS_pattern
-            << std::endl;
-  std::cout << "Read gem5 miss info from "
-            << analyze_gem5_missinfo::FLAGS_missinfo << std::endl;
+  unsigned long long miss, hit;
+  std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta =
+      std::make_shared<std::map<unsigned long long, PCmeta>>();
+  LOG(INFO) << "Read pattern info from " << FLAGS_pattern << std::endl;
+  LOG(INFO) << "Read gem5 miss info from " << FLAGS_missinfo << std::endl;
   while (fin1 >> std::hex >> pc) {
-    analyze_gem5_missinfo::pc2meta[pc] = PCmeta();
-    analyze_gem5_missinfo::pc2meta[pc].input(fin1);
+    (*pc2meta)[pc] = PCmeta();
+    (*pc2meta)[pc].input(fin1);
   }
-  while (std::getline(fin2, str)) {
-    auto pos = str.find("PC: ");
-    if (pos == std::string::npos) continue;
-    pos += 4;
-    str = str.substr(pos);
-    pc = analyze_gem5_missinfo::readhex(str);
-    pos = str.find("miss count: ");
-    if (pos == std::string::npos) continue;
-    pos += 12;
-    str = str.substr(pos);
-    count = analyze_gem5_missinfo::readdec(str);
-    auto meta = analyze_gem5_missinfo::pc2meta.find(pc);
-    if (meta == analyze_gem5_missinfo::pc2meta.end()) {
-      LOG(WARNING) << "Cannot find pc 0x" << std::hex << pc
-                   << " from pattern file." << std::endl;
-      continue;
-    }
-    analyze_gem5_missinfo::cnt[to_underlying(meta->second.pattern)] += count;
-  }
-  for (int i = 0; i < PATTERN_NUM; i++) {
-    std::cout << PATTERN_NAME[i] << " " << analyze_gem5_missinfo::cnt[i]
-              << std::endl;
+
+  std::unique_ptr<MissInfo> missinfo =
+      std::make_unique<MissInfo>(pc2meta, fin2);
+  missinfo->read();
+
+  if (FLAGS_base == "") {
+    missinfo->write();
+  } else {
+    transAbsolute(FLAGS_base);
+    std::shared_ptr<std::ifstream> fin3 =
+        std::make_shared<std::ifstream>(FLAGS_base);
+    LOG_IF(ERROR, !fin3->good())
+        << "Cannot open missinfo file " << FLAGS_base << std::endl;
+    std::unique_ptr<MissInfo> base = std::make_unique<MissInfo>(pc2meta, fin3);
+    base->read();
+    compare_missinfo(std::move(missinfo), std::move(base));
   }
   return 0;
 }

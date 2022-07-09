@@ -15,6 +15,8 @@ void PCmeta::input(std::ifstream &in) {
         << "Cannot find pattern " << pattern_name << std::endl;
     pattern = it->second;
   }
+  struct_pointer_meta tmp;
+  int n;
   switch (pattern) {
     case PATTERN::STATIC:
       in >> std::hex >> lastaddr;
@@ -33,8 +35,12 @@ void PCmeta::input(std::ifstream &in) {
           std::dec >> pc_value.offset;
       break;
     case PATTERN::STRUCT_POINTER:
-      in >> std::hex >> last_pc_sp >> std::dec >> offset_sp >>
-          maybe_pointer_chase;
+      in >> std::dec >> n;
+      while (n--) {
+        in >> std::hex >> tmp.pc >> std::dec >> tmp.offset;
+        struct_pointer_candidate[tmp.pc] = tmp;
+      }
+      in >> maybe_pointer_chase;
       break;
     default:
       break;
@@ -62,8 +68,12 @@ void PCmeta::output(std::ofstream &out) {
           << pc_value.addr << " " << std::dec << pc_value.offset << std::endl;
       break;
     case PATTERN::STRUCT_POINTER:
-      out << " " << std::hex << last_pc_sp << " " << std::dec << offset_sp
-          << " " << maybe_pointer_chase << std::endl;
+      out << " " << std::dec << struct_pointer_candidate.size();
+      for (auto &c : struct_pointer_candidate) {
+        out << " " << std::hex << c.second.pc << " " << std::dec
+            << c.second.offset;
+      }
+      out << " " << maybe_pointer_chase << std::endl;
       break;
     default:
       out << std::endl;

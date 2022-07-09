@@ -11,6 +11,7 @@ class PatternList {
  private:
   std::unordered_map<unsigned long long, PCmeta> pc2meta;
   std::unordered_map<unsigned long long, unsigned long long> next_addr;
+  std::unordered_map<unsigned long long, unsigned long long> pc2id;
   unsigned long long hit_count[PATTERN_NUM];
   unsigned long long total_count[PATTERN_NUM];
   unsigned long long all_count[PATTERN_NUM];
