@@ -11,11 +11,11 @@
 #include "pc_meta.h"
 #include "utils/macro.h"
 
-const int METRICS_NUM = 5;
+const int METRICS_NUM = 6;
 const int PRIMARY_KEY_INTERVAL = 3;
-const std::string metric_name[] = {"PC", "misses", "hits", "pfUseful",
-                                   "missLatency"};
-const bool metric_is_hex[] = {true, false, false, false, false};
+const std::string metric_name[] = {"PC",          "misses",   "hits",
+                                   "totalAccess", "pfUseful", "missLatency"};
+const bool metric_is_hex[] = {true, false, false, false, false, false};
 class MissInfo {
  private:
   std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta_;
@@ -84,6 +84,10 @@ class MissInfo {
       bool flag = true;
       std::array<unsigned long long, METRICS_NUM> val;
       for (int j = 0; j < METRICS_NUM; j++) {
+        if (j == 3) {
+          val[j] = val[1] + val[2];
+          continue;
+        }
         val[j] = readstr(str, metric_name[j], metric_is_hex[j]);
         if (val[j] == INT64_MAX) {
           if (j < PRIMARY_KEY_INTERVAL) {
