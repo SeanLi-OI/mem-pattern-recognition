@@ -21,61 +21,28 @@ DEFINE_string(base, "", "gem5 missinfo file (base)");
 
 void compare_missinfo(std::unique_ptr<MissInfo> missinfo,
                       std::unique_ptr<MissInfo> base) {
-  std::cout << "IPC: " << missinfo->ipc
-            << PERCENT_WITH_OP(missinfo->ipc - base->ipc, base->ipc)
+  std::cout << "IPC: " << missinfo->ipc_
+            << PERCENT_WITH_OP(missinfo->ipc_ - base->ipc_, base->ipc_)
             << std::endl;
-  std::cout << "Pattern        MissCount                  HitCount             "
-               "      TotalCount                 PFusefulCount"
-            << std::endl;
-  unsigned long long misses = 0, hits = 0, total = 0, pfuseful = 0;
-  unsigned long long misses_base = 0, hits_base = 0, total_base = 0,
-                     pfuseful_base = 0;
+  std::cout << MY_ALIGN_STR("Pattern");
+  for (int j = 0; j < METRICS_NUM; j++)
+    std::cout << MY_ALIGN(metric_name[j]) << MY_ALIGN_STR("");
+  std::cout << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
-    std::cout << MY_ALIGN_STR(PATTERN_NAME[i])
-              << MY_ALIGN(missinfo->miss_cnt[i])
-              << MY_ALIGN_STR(DIFF(missinfo->miss_cnt[i], base->miss_cnt[i]))
-              << MY_ALIGN(missinfo->hit_cnt[i])
-              << MY_ALIGN_STR(DIFF(missinfo->hit_cnt[i], base->hit_cnt[i]))
-              << MY_ALIGN(missinfo->total_cnt[i])
-              << MY_ALIGN_STR(DIFF(missinfo->total_cnt[i], base->total_cnt[i]))
-              << MY_ALIGN(missinfo->pfuseful_cnt[i])
-              << MY_ALIGN_STR(
-                     DIFF(missinfo->pfuseful_cnt[i], base->pfuseful_cnt[i]))
-              << std::endl;
-    misses += missinfo->miss_cnt[i];
-    hits += missinfo->hit_cnt[i];
-    total += missinfo->total_cnt[i];
-    pfuseful += missinfo->pfuseful_cnt[i];
-    misses_base += base->miss_cnt[i];
-    hits_base += base->hit_cnt[i];
-    total_base += base->total_cnt[i];
-    pfuseful_base += base->pfuseful_cnt[i];
+    std::cout << MY_ALIGN_STR(PATTERN_NAME[i]);
+    for (int j = 0; j < METRICS_NUM; j++) {
+      std::cout << MY_ALIGN(missinfo->cnt_[i][j])
+                << MY_ALIGN_STR(DIFF(missinfo->cnt_[i][j], base->cnt_[i][j]));
+    }
+    std::cout << std::endl;
   }
-  std::cout << MY_ALIGN_STR("total") << MY_ALIGN(misses)
-            << MY_ALIGN_STR(DIFF(misses, misses_base)) << MY_ALIGN(hits)
-            << MY_ALIGN_STR(DIFF(hits, hits_base)) << MY_ALIGN(total)
-            << MY_ALIGN_STR(DIFF(total, total_base)) << MY_ALIGN(pfuseful)
-            << MY_ALIGN_STR(DIFF(pfuseful, pfuseful_base)) << std::endl;
-  std::cout << "Unknown pattern PC: " << missinfo->cannot_find_pc
-            << PERCENT(missinfo->cannot_find_pc, missinfo->total_pc)
-            << std::endl;
-  std::cout << "Total PC: " << missinfo->total_pc << std::endl;
-  std::cout << "Unknown pattern hits: " << missinfo->cannot_find_hits
-            << PERCENT(missinfo->cannot_find_hits, missinfo->total_hits)
-            << std::endl;
-  std::cout << "Total hits: " << missinfo->total_hits << std::endl;
-  std::cout << "Unknown pattern miss: " << missinfo->cannot_find_miss
-            << PERCENT(missinfo->cannot_find_miss, missinfo->total_miss)
-            << std::endl;
-  std::cout << "Total miss: " << missinfo->total_miss << std::endl;
-  std::cout << "Unknown pattern access: " << missinfo->cannot_find_access
-            << PERCENT(missinfo->cannot_find_access, missinfo->total_access)
-            << std::endl;
-  std::cout << "Total access: " << missinfo->total_access << std::endl;
-  std::cout << "Unknown pattern pfuseful: " << missinfo->cannot_find_pfuseful
-            << PERCENT(missinfo->cannot_find_pfuseful, missinfo->total_pfuseful)
-            << std::endl;
-  std::cout << "Total pfuseful: " << missinfo->total_pfuseful << std::endl;
+  std::cout << MY_ALIGN_STR("total");
+  for (int j = 0; j < METRICS_NUM; j++) {
+    std::cout << MY_ALIGN(missinfo->total_[j])
+              << MY_ALIGN_STR(DIFF(missinfo->total_[j], base->total_[j]));
+  }
+  std::cout << std::endl;
+  missinfo->write_unknown();
 }
 
 int main(int argc, char *argv[]) {

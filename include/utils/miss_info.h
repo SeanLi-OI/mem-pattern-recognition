@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 
+#include <array>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -10,10 +11,15 @@
 #include "pc_meta.h"
 #include "utils/macro.h"
 
+const int METRICS_NUM = 5;
+const int PRIMARY_KEY_INTERVAL = 3;
+const std::string metric_name[] = {"PC", "misses", "hits", "pfUseful",
+                                   "missLatency"};
+const bool metric_is_hex[] = {true, false, false, false, false};
 class MissInfo {
  private:
-  std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta;
-  std::shared_ptr<std::ifstream> fin2;
+  std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta_;
+  std::shared_ptr<std::ifstream> fin_;
 
   unsigned long long readhex(std::string s) {
     unsigned long long n = 0;
@@ -60,89 +66,84 @@ class MissInfo {
   }
 
  public:
-  double ipc;
-  std::vector<unsigned long long> miss_cnt;
-  std::vector<unsigned long long> hit_cnt;
-  std::vector<unsigned long long> total_cnt;
-  std::vector<unsigned long long> pfuseful_cnt;
-  unsigned long long cannot_find_pc, total_pc;
-  unsigned long long cannot_find_access, total_access;
-  unsigned long long cannot_find_hits, total_hits;
-  unsigned long long cannot_find_miss, total_miss;
-  unsigned long long cannot_find_pfuseful, total_pfuseful;
-  MissInfo(std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta_,
-           std::shared_ptr<std::ifstream> fin2_)
-      : pc2meta(pc2meta_), fin2(fin2_) {
-    miss_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
-    hit_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
-    total_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
-    pfuseful_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
-    cannot_find_pc = total_pc = 0;
-    cannot_find_access = total_access = 0;
-    cannot_find_hits = total_hits = 0;
-    cannot_find_miss = total_miss = 0;
-    cannot_find_pfuseful = total_pfuseful = 0;
-  }
+  double ipc_;
+  std::array<std::array<unsigned long long, METRICS_NUM>, PATTERN_NUM> cnt_;
+  std::array<unsigned long long, PATTERN_NUM> cannot_find_;
+  std::array<unsigned long long, PATTERN_NUM> total_;
+  MissInfo(std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta,
+           std::shared_ptr<std::ifstream> fin)
+      : pc2meta_(pc2meta), fin_(fin), cnt_({}), cannot_find_({}), total_({}) {}
   void read() {
     std::string str;
-    while (std::getline(*fin2, str)) {
+    while (std::getline(*fin_, str)) {
       if (str.length() > 3 && str[0] == 'i' && str[1] == 'p' && str[2] == 'c') {
         std::stringstream tmp;
         tmp << str.substr(4);
-        tmp >> ipc;
+        tmp >> ipc_;
       }
-      auto pc = readstr(str, "PC:", true);
-      if (pc == INT64_MAX) continue;
-      auto miss = readstr(str, "misses:", false);
-      if (miss == INT64_MAX) continue;
-      auto hit = readstr(str, "hits:", false);
-      if (hit == INT64_MAX) continue;
-      auto pfuseful = readstr(str, "pfUseful:", false);
-      if (pfuseful == INT64_MAX) continue;
-      total_pc++;
-      total_hits += hit;
-      total_miss += miss;
-      total_access += hit + miss;
-      total_pfuseful += pfuseful;
-      auto meta = (*pc2meta).find(pc);
-      if (meta == (*pc2meta).end()) {
-        LOG(WARNING) << "Cannot find pc 0x" << std::hex << pc
+      bool flag = true;
+      std::array<unsigned long long, METRICS_NUM> val;
+      for (int j = 0; j < METRICS_NUM; j++) {
+        val[j] = readstr(str, metric_name[j], metric_is_hex[j]);
+        if (val[j] == INT64_MAX) {
+          if (j < PRIMARY_KEY_INTERVAL) {
+            flag = false;
+            break;
+          } else {
+            LOG(WARNING) << "Cannot find value of (" << metric_name[j] << ")"
+                         << " for pc 0x" << std::hex << val[0]
+                         << " from missinfo file." << std::endl;
+            val[j] = 0;
+          }
+        }
+      }
+      if (!flag) continue;
+      total_[0]++;
+      for (int j = 1; j < METRICS_NUM; j++) {
+        total_[j] += val[j];
+      }
+      auto meta = (*pc2meta_).find(val[0]);
+      if (meta == (*pc2meta_).end()) {
+        LOG(WARNING) << "Cannot find pc 0x" << std::hex << val[0]
                      << " from pattern file." << std::endl;
-        cannot_find_pc++;
-        cannot_find_hits += hit;
-        cannot_find_miss += miss;
-        cannot_find_access += hit + miss;
-        cannot_find_pfuseful += pfuseful;
+        cannot_find_[0]++;
+        for (int j = 1; j < METRICS_NUM; j++) {
+          cannot_find_[j] += val[j];
+        }
         continue;
       }
       auto pattern = meta->second.pattern;
       if (meta->second.maybe_pointer_chase) pattern = PATTERN::POINTER_A;
-      if (pattern == PATTERN::STRIDE) {
-        LOG(INFO) << std::hex << pc << " " << std::dec << miss << " " << hit
-                  << std::endl;
+      cnt_[to_underlying(pattern)][0]++;
+      for (int j = 1; j < METRICS_NUM; j++) {
+        cnt_[to_underlying(pattern)][j] += val[j];
       }
-      miss_cnt[to_underlying(pattern)] += miss;
-      hit_cnt[to_underlying(pattern)] += hit;
-      total_cnt[to_underlying(pattern)] += hit + miss;
-      pfuseful_cnt[to_underlying(pattern)] += pfuseful;
     }
   }
   void write() {
-    std::cout << MY_ALIGN_STR("Pattern") << MY_ALIGN("MissCount")
-              << MY_ALIGN("HitCount") << MY_ALIGN("TotalCount") << std::endl;
-    unsigned long long misses = 0, hits = 0, total = 0, pfuseful = 0;
+    std::cout << MY_ALIGN_STR("Pattern");
+    for (int j = 0; j < METRICS_NUM; j++) std::cout << MY_ALIGN(metric_name[j]);
+    std::cout << std::endl;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      std::cout << MY_ALIGN_STR(PATTERN_NAME[i]) << MY_ALIGN(miss_cnt[i])
-                << MY_ALIGN(hit_cnt[i]) << MY_ALIGN(total_cnt[i])
-                << MY_ALIGN(pfuseful_cnt[i]) << std::endl;
-      misses += miss_cnt[i];
-      hits += hit_cnt[i];
-      total += total_cnt[i];
-      pfuseful += pfuseful_cnt[i];
+      std::cout << MY_ALIGN_STR(PATTERN_NAME[i]);
+      for (int j = 0; j < METRICS_NUM; j++) {
+        std::cout << MY_ALIGN(cnt_[i][j]);
+      }
+      std::cout << std::endl;
     }
 
-    std::cout << MY_ALIGN_STR("total") << MY_ALIGN(misses) << MY_ALIGN(hits)
-              << MY_ALIGN(total) << MY_ALIGN(pfuseful) << std::endl;
-    std::cout << "Unknown pattern PC: " << cannot_find_pc << std::endl;
+    std::cout << MY_ALIGN_STR("total");
+    for (int j = 0; j < METRICS_NUM; j++) std::cout << MY_ALIGN(total_[j]);
+    std::cout << std::endl;
+
+    write_unknown();
+  }
+  void write_unknown() {
+    for (int j = 0; j < METRICS_NUM; j++) {
+      std::cout << "Unknown pattern " << metric_name[j] << ": "
+                << cannot_find_[j] << PERCENT(cannot_find_[j], total_[j])
+                << std::endl;
+      std::cout << "Total " << metric_name[j] << ": " << total_[j] << std::endl;
+    }
   }
 };
