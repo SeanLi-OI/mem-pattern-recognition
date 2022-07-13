@@ -61,7 +61,7 @@ bool TraceList::check_stride_pattern(
       if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] ==
           true) {
         if (it_meta->second.stride_tmp > 0)
-          it_meta->second.stride_tmp--;
+          it_meta->second.stride_tmp/=2;
         else
           it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
       }

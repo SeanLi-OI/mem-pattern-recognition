@@ -64,12 +64,24 @@ class MissInfo {
   std::vector<unsigned long long> miss_cnt;
   std::vector<unsigned long long> hit_cnt;
   std::vector<unsigned long long> total_cnt;
+  std::vector<unsigned long long> pfuseful_cnt;
+  unsigned long long cannot_find_pc, total_pc;
+  unsigned long long cannot_find_access, total_access;
+  unsigned long long cannot_find_hits, total_hits;
+  unsigned long long cannot_find_miss, total_miss;
+  unsigned long long cannot_find_pfuseful, total_pfuseful;
   MissInfo(std::shared_ptr<std::map<unsigned long long, PCmeta>> pc2meta_,
            std::shared_ptr<std::ifstream> fin2_)
       : pc2meta(pc2meta_), fin2(fin2_) {
     miss_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
     hit_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
     total_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
+    pfuseful_cnt = std::vector<unsigned long long>(PATTERN_NUM, 0);
+    cannot_find_pc = total_pc = 0;
+    cannot_find_access = total_access = 0;
+    cannot_find_hits = total_hits = 0;
+    cannot_find_miss = total_miss = 0;
+    cannot_find_pfuseful = total_pfuseful = 0;
   }
   void read() {
     std::string str;
@@ -85,33 +97,52 @@ class MissInfo {
       if (miss == INT64_MAX) continue;
       auto hit = readstr(str, "hits:", false);
       if (hit == INT64_MAX) continue;
+      auto pfuseful = readstr(str, "pfUseful:", false);
+      if (pfuseful == INT64_MAX) continue;
+      total_pc++;
+      total_hits += hit;
+      total_miss += miss;
+      total_access += hit + miss;
+      total_pfuseful += pfuseful;
       auto meta = (*pc2meta).find(pc);
       if (meta == (*pc2meta).end()) {
         LOG(WARNING) << "Cannot find pc 0x" << std::hex << pc
                      << " from pattern file." << std::endl;
+        cannot_find_pc++;
+        cannot_find_hits += hit;
+        cannot_find_miss += miss;
+        cannot_find_access += hit + miss;
+        cannot_find_pfuseful += pfuseful;
         continue;
       }
       auto pattern = meta->second.pattern;
       if (meta->second.maybe_pointer_chase) pattern = PATTERN::POINTER_A;
+      if (pattern == PATTERN::STRIDE) {
+        LOG(INFO) << std::hex << pc << " " << std::dec << miss << " " << hit
+                  << std::endl;
+      }
       miss_cnt[to_underlying(pattern)] += miss;
       hit_cnt[to_underlying(pattern)] += hit;
       total_cnt[to_underlying(pattern)] += hit + miss;
+      pfuseful_cnt[to_underlying(pattern)] += pfuseful;
     }
   }
   void write() {
-    std::cout << "Pattern         MissCount    HitCount    TotalCount"
-              << std::endl;
-    unsigned long long misses = 0, hits = 0, total = 0;
+    std::cout << MY_ALIGN_STR("Pattern") << MY_ALIGN("MissCount")
+              << MY_ALIGN("HitCount") << MY_ALIGN("TotalCount") << std::endl;
+    unsigned long long misses = 0, hits = 0, total = 0, pfuseful = 0;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      std::cout << MY_ALIGN_STR(PATTERN_NAME[i]) << " " << MY_ALIGN(miss_cnt[i])
-                << " " << MY_ALIGN(hit_cnt[i]) << MY_ALIGN(total_cnt[i])
-                << std::endl;
+      std::cout << MY_ALIGN_STR(PATTERN_NAME[i]) << MY_ALIGN(miss_cnt[i])
+                << MY_ALIGN(hit_cnt[i]) << MY_ALIGN(total_cnt[i])
+                << MY_ALIGN(pfuseful_cnt[i]) << std::endl;
       misses += miss_cnt[i];
       hits += hit_cnt[i];
       total += total_cnt[i];
+      pfuseful += pfuseful_cnt[i];
     }
 
-    std::cout << MY_ALIGN_STR("total") << " " << MY_ALIGN(misses) << " "
-              << MY_ALIGN(hits) << MY_ALIGN(total) << std::endl;
+    std::cout << MY_ALIGN_STR("total") << MY_ALIGN(misses) << MY_ALIGN(hits)
+              << MY_ALIGN(total) << MY_ALIGN(pfuseful) << std::endl;
+    std::cout << "Unknown pattern PC: " << cannot_find_pc << std::endl;
   }
 };
