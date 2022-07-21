@@ -1,7 +1,7 @@
 #include <stdlib.h>
+#include <string.h>
 
-#include <array>
-#include <functional>
+#include <random>
 struct tree {
   struct tree* next;
   int val;
@@ -10,78 +10,78 @@ struct tree2 {
   int val;
   int next;
 };
-void pointer_chase() {
-  int N = 10000, i, k;
-  struct tree* root = (struct tree*)malloc(sizeof(struct tree));
-  struct tree* now = root;
-  for (i = 1; i <= N; i++) {
-    now->next = (struct tree*)malloc(sizeof(struct tree));
-    now = now->next;
-  }
-  now = root;
-  for (i = 1; i <= N; i++) {
-    now = now->next;  // pointerA
-    k = now->val;     // chain
-  }
+const int n = 5;
+const int N = 10000;
+const int my_mem_size = 100000000;
+std::mt19937 my_rand;
+std::uniform_int_distribution<int> dist(0, my_mem_size - 1);
+struct tree* my_mem;
+bool* has_alloc;
+void init_my_mem() {
+  my_mem = new struct tree[my_mem_size];
+  has_alloc = new bool[my_mem_size];
+  memset(has_alloc, 0, sizeof(bool) * my_mem_size);
 }
-void indirect() {
-  int N = 10000;
-  int A[N], B[N];
-  for (int i = 0; i < N; i++) {
-    A[i] = rand() % N;
-    B[i] = rand() % N;
+struct tree* my_new() {
+  int pos = dist(my_rand);
+  while (has_alloc[pos]) {
+    pos = dist(my_rand);
   }
-  int t;
-  for (int i = 0; i < N; i++) {
-    t = A[B[i]];  // indirect
-  }
+  has_alloc[pos] = true;
+  return my_mem + pos;
 }
-void stride() {
-  int N = 10000, a[1920001];
-  int stride = 1;
-  for (int i = 0; i < N; i += stride) {
-    a[i] = N - i;  // stride
-  }
-  stride = 8;
-  for (int i = 0; i < N; i += stride) {
-    a[i] = N - i;  // stride
-  }
-  stride = 64;
-  for (int i = 0; i < N; i += stride) {
-    a[i] = N - i;  // stride
-  }
-  stride = 192;
-  for (int i = 0; i < N; i += stride) {
-    a[i] = N - i;  // stride
-  }
-}
-void struct_pointer() {
-  int N = 10000, i;
-  struct tree2 a[N];
-  for (i = 0; i < N; i++) {
-    a[i].val = rand() % N;
-    a[i].next = rand() % N;
-  }
-  int tmp = 0;
-  for (i = 1; i <= N; i++) {
-    int t = rand() % N;
-    struct tree2* t2 = &a[t];
-    tmp = t2->next;  // struct_pointer
-  }
-}
-const int num = 4;
 int main() {
-  std::array<int, num> N = {5, 5, 5, 5};
-  std::array<std::function<void()>, num> func = {pointer_chase, indirect,
-                                                 stride, struct_pointer};
-  bool flag = true;
-  while (flag) {
-    flag = false;
-    for (int i = 0; i < num; i++) {
-      if (N[i] > 0) {
-        func[i]();
-        N[i]--;
-        flag = true;
+  for (int i = 0; i < n; i++) {
+    init_my_mem();
+    struct tree *root = my_new(), *now = root;  // pointer_chase
+    struct tree* array[N];                      // pointer_array
+    int* inA = new int[my_mem_size];
+    int inB[N];                    // indirect
+    int st[1920001];               // stride
+    struct tree2 sp[N];            // struct pointer
+    for (int j = 0; j < N; j++) {  // init loop
+      {
+        // pointer_chase init
+        now->next = my_new();
+        now = now->next;
+      }
+      {  // indirect init
+        inA[j] = dist(my_rand);
+        inB[j] = dist(my_rand);
+      }
+      {  // struct pointer init
+        sp[j].val = rand() % N;
+        sp[j].next = rand() % N;
+      }
+      {
+        // pointer array
+        array[j] = my_new();
+      }
+    }
+    int tmp = 0, t, k;
+    now = root;
+    for (int j = 0; j < 10000; j++) {  // run loop
+      {                                // pointer chase
+        now = now->next;
+        k = now->val;
+      }
+      {  // indirect
+        t = inA[inB[j]];
+      }
+      {  // Stride
+        st[j] = N - j;
+        st[j * 8] = N - j;
+        st[j * 64] = N - j;
+        st[j * 192] = N - j;
+      }
+      {  // struct_pointer
+        int t = rand() % N;
+        struct tree2* t2 = &sp[t];
+        tmp = t2->next;
+      }
+      {
+        // pointer array
+        k = array[j]->val;
       }
     }
   }

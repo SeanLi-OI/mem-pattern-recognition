@@ -23,6 +23,12 @@ DEFINE_int64(len, -1, "trace len");
 DEFINE_uint64(hrsize, 2048, "Size of hot region");
 DEFINE_uint64(debug_print_interval, 10000000, "Size of debug print interval");
 
+bool trace_filter(const unsigned long long int &ip, const bool &isWrite,
+                  const unsigned long long int &value) {
+  if (!isWrite && value == ip) return true;
+  return false;
+}
+
 void add_trace(TraceList &traceList, unsigned long long &id,
                unsigned long long int ip, MemRecord &r, bool isWrite,
                const int inst_id) {
@@ -30,6 +36,7 @@ void add_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   //   if (ip == 0x4024ee)
+  if (trace_filter(ip, isWrite, tmp)) return;
   traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   //   if (ip == 0x40484f)
   // fprintf(stderr, "%c %llx %llx %llx\n", isWrite ? 'W' : 'R',
@@ -41,6 +48,7 @@ void valid_trace(PatternList &patternList, unsigned long long &id,
   if (r.len == 0 || r.len > 8) return;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  if (trace_filter(ip, isWrite, tmp)) return;
   //   if (ip == 0x4024ee)
   patternList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   // if (ip == 0x101a908)
@@ -54,16 +62,18 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   if (r.len == 0 || r.len > 8) return;
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  if (trace_filter(ip, isWrite, tmp)) return;
   // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
   // if (ip == 0x401821 || ip == 0x401822 || ip == 0x401830 || ip == 0x40183e) {
-  if (ip == 0x401846) {
+  if (ip >= 0x4007f5 && ip <= 0x400814) {
     // if (inst_id>=6856070&&inst_id<=6856210) {
     // if (r.addr == 0x6f9cb0) {
     id++;
-    fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' : 'R',
-            (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
-            inst_id);
-    // traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+    // fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' :
+    // 'R',
+    //         (unsigned long long)ip, (unsigned long long)r.addr, tmp,
+    //         (int)r.len, inst_id);
+    traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   }
 }
 

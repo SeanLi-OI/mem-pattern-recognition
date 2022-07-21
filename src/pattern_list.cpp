@@ -30,15 +30,27 @@ void PatternList::add_trace(unsigned long long int pc,
     return;
   }
   int lastest_id = 0;
+  std::unordered_map<unsigned long long, unsigned long long>::iterator
+      it_indirect;
   switch (it_meta->second.pattern) {
     case PATTERN::pointer:
     case PATTERN::POINTER_B:
       next_addr[pc] = pc2meta[it_meta->second.lastpc].lastvalue;
       break;
     case PATTERN::INDIRECT:
-      next_addr[pc] = pc2meta[it_meta->second.pc_value.value].lastvalue *
-                          it_meta->second.pc_value.offset +
-                      it_meta->second.pc_value.addr;
+      it_indirect = indirect_base_addr.find(pc);
+      if (it_indirect == indirect_base_addr.end()) {
+        next_addr[pc] = pc2meta[it_meta->second.pc_value.value].lastvalue *
+                            it_meta->second.pc_value.offset +
+                        it_meta->second.pc_value.addr;
+      } else {
+        next_addr[pc] = pc2meta[it_meta->second.pc_value.value].lastvalue *
+                            it_meta->second.pc_value.offset +
+                        it_indirect->second;
+      }
+      indirect_base_addr[pc] =
+          addr - pc2meta[it_meta->second.pc_value.value].lastvalue *
+                     it_meta->second.pc_value.offset;
       break;
     case PATTERN::STRUCT_POINTER:
       for (auto &c : it_meta->second.struct_pointer_candidate) {

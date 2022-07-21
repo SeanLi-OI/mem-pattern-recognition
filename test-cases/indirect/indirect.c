@@ -1,5 +1,5 @@
 #include<stdlib.h>
-const int N=10000;
+const int N=100000000;
 int main(){
     int A[N],B[N];
     for(int i=0;i<N;i++){
