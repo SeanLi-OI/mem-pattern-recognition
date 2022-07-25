@@ -2,6 +2,7 @@
 #include <glog/logging.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -13,7 +14,6 @@
 #include "pc_meta.h"
 #include "utils/macro.h"
 #include "utils/miss_info.h"
-#include "utils/trans_abs_path.h"
 
 DEFINE_string(pattern, "", "pattern file");
 DEFINE_string(missinfo, "", "gem5 missinfo file");
@@ -50,13 +50,13 @@ int main(int argc, char *argv[]) {
   FLAGS_logtostderr = 1;
   LOG_IF(ERROR, FLAGS_pattern == "")
       << "Require missinfo file by -pattern=" << std::endl;
-  transAbsolute(FLAGS_pattern);
+  FLAGS_pattern = std::filesystem::absolute(FLAGS_pattern);
   std::ifstream fin1(FLAGS_pattern);
   LOG_IF(ERROR, !fin1.good())
       << "Cannot open pattern file " << FLAGS_pattern << std::endl;
   LOG_IF(ERROR, FLAGS_missinfo == "")
       << "Require missinfo file by -missinfo=" << std::endl;
-  transAbsolute(FLAGS_missinfo);
+  FLAGS_missinfo = std::filesystem::absolute(FLAGS_missinfo);
   std::shared_ptr<std::ifstream> fin2 =
       std::make_shared<std::ifstream>(FLAGS_missinfo);
   LOG_IF(ERROR, !fin2->good())
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   if (FLAGS_base == "") {
     missinfo->write();
   } else {
-    transAbsolute(FLAGS_base);
+    FLAGS_base = std::filesystem::absolute(FLAGS_base);
     std::shared_ptr<std::ifstream> fin3 =
         std::make_shared<std::ifstream>(FLAGS_base);
     LOG_IF(ERROR, !fin3->good())

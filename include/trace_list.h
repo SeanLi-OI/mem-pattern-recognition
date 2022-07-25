@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "instruction.h"
 #include "pattern.h"
 #include "pc_meta.h"
 
@@ -82,7 +83,7 @@ class TraceList {
                         const unsigned long long &inst_id);
 
  public:
-  TraceList(unsigned long long hr_size, bool enable_hotregion) {
+  TraceList(unsigned long long hr_size = 0, bool enable_hotregion = false) {
     for (int i = 0; i < PATTERN_NUM; i++) pattern_count[i] = 0;
 #ifdef ENABLE_TIMER
     total_time = 0;
@@ -98,7 +99,13 @@ class TraceList {
                  unsigned long long int value, bool isWrite,
                  unsigned long long int &id, const unsigned long long inst_id);
   void printStats(unsigned long long totalCnt, const char filename[],
-                  const char hot_region_file[]);
+                  const char hot_region_file[] = "");
+
+  void merge(std::string input_dir, int id, unsigned long long &inst_id);
 };
+
+void add_trace(TraceList &traceList, unsigned long long &id,
+               unsigned long long int ip, MemRecord &r, bool isWrite,
+               const int inst_id);
 
 #endif

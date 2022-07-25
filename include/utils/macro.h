@@ -27,4 +27,7 @@
   (std::string("(") + std::string(n1 > n2 ? "+" : "") + \
    std::to_string((double)n1 - (double)n2) + std::string(")"))
 
+bool trace_filter(const unsigned long long int &ip, const bool &isWrite,
+                  const unsigned long long int &value);
+
 #endif

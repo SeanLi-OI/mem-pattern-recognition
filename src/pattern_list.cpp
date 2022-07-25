@@ -4,9 +4,20 @@
 
 #include <glog/logging.h>
 
+#include <algorithm>
 #include <fstream>
 
 #include "utils/macro.h"
+
+void valid_trace(PatternList &patternList, unsigned long long &id,
+                 unsigned long long int ip, MemRecord &r, bool isWrite,
+                 const int inst_id) {
+  if (r.len == 0 || r.len > 8) return;
+  unsigned long long tmp = 0;
+  for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  if (trace_filter(ip, isWrite, tmp)) return;
+  patternList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+}
 
 PatternList::PatternList(const char filename[]) {
   std::ifstream in(filename);
@@ -74,7 +85,15 @@ void PatternList::add_trace(unsigned long long int pc,
   auto it = next_addr.find(pc);
   if (it != next_addr.end()) {
     total_count[pattern_now]++;
-    if (it->second == addr) hit_count[pattern_now]++;
+    if (it->second == addr)
+      hit_count[pattern_now]++;
+    else {
+      auto it2 = miss_count.find(pc);
+      if (it2 == miss_count.end())
+        miss_count[pc] = 1;
+      else
+        it2->second++;
+    }
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:
@@ -129,4 +148,18 @@ void PatternList::printStats(unsigned long long totalCnt,
   out << "Hit Overall : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, all_sum)
       << std::endl;
   out << "=================================================" << std::endl;
+
+  /*****************************DEBUG OUTPUT*****************************/
+  // std::vector<std::pair<unsigned long long, unsigned long long>> elems(
+  //     miss_count.begin(), miss_count.end());
+  // std::sort(elems.begin(), elems.end(),
+  //           [](std::pair<unsigned long long, unsigned long long> a,
+  //              std::pair<unsigned long long, unsigned long long> b) {
+  //             return a.second > b.second;
+  //           });
+  // for (auto &e : elems) {
+  //   std::cerr << std::hex << e.first << " " << std::dec << e.second << " "
+  //             << PATTERN_NAME[to_underlying(pc2meta[e.first].pattern)]
+  //             << std::endl;
+  // }
 }

@@ -4,11 +4,23 @@
 
 #include <glog/logging.h>
 
+#include <filesystem>
+
 #include "utils/macro.h"
 
 inline long long int abs_sub(unsigned long long int a,
                              unsigned long long int b) {
   return (long long)a - (long long)b;
+}
+
+void add_trace(TraceList &traceList, unsigned long long &id,
+               unsigned long long int ip, MemRecord &r, bool isWrite,
+               const int inst_id) {
+  if (r.len == 0 || r.len > 8) return;
+  unsigned long long tmp = 0;
+  for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
+  if (trace_filter(ip, isWrite, tmp)) return;
+  traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
 }
 
 void TraceList::erase_before(std::deque<TraceNode> &L,
@@ -57,13 +69,17 @@ bool TraceList::check_stride_pattern(
     if (offset == it_meta->second.offset_stride) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] = true;
       it_meta->second.stride_tmp++;
+      it_meta->second.stride_flag = false;
       return true;
     } else {
       if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] ==
           true) {
-        if (it_meta->second.stride_tmp > 0)
-          it_meta->second.stride_tmp /= 2;
-        else
+        if (it_meta->second.stride_tmp > 0) {
+          if (it_meta->second.stride_flag)
+            it_meta->second.stride_tmp /= 2;
+          else
+            it_meta->second.stride_flag = true;
+        } else
           it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
       }
     }
@@ -180,7 +196,8 @@ bool TraceList::check_indirect_pattern(
                   0) {
             offset_now = abs_sub(addr, it->second.addr) /
                          abs_sub(trace.value, it->second.value);
-            if (offset_now != 4 && offset_now != 8 && offset_now != 16) {
+            if (offset_now != 2 && offset_now != 4 && offset_now != 8 &&
+                offset_now != 16) {
               it->second.confidence--;
               if (it->second.confidence > 0) {
                 tmp[trace.pc] = it->second;
@@ -241,6 +258,7 @@ bool TraceList::check_struct_pointer_pattern(
     unsigned long long int &addr) {
   std::unordered_map<unsigned long long int, PCmeta::struct_pointer_meta> tmp(
       it_meta->second.struct_pointer_candidate);
+  if (it_meta->second.is_pattern(PATTERN::STRIDE)) return false;
   bool flag = false;
   for (auto it_trace = traceHistory.rbegin(); it_trace != traceHistory.rend();
        it_trace++) {
@@ -250,7 +268,7 @@ bool TraceList::check_struct_pointer_pattern(
     }
     auto it = it_meta->second.struct_pointer_candidate.find(trace.pc);
     long long offset_now = abs_sub(addr, trace.value);
-    if (offset_now == 0 || offset_now >= 32768) continue;
+    if (offset_now <= 0 || offset_now >= 32768) continue;
     if (it_meta->second.meeted_pc_sp.find(trace.pc) !=
         it_meta->second.meeted_pc_sp.end()) {
       if (it != it_meta->second.struct_pointer_candidate.end()) {
@@ -258,8 +276,9 @@ bool TraceList::check_struct_pointer_pattern(
           tmp.erase(tmp.find(trace.pc));
           flag = true;
         }
-        // if (trace.pc == 0x401830 && it_meta->first == 0x40183e) {
-        //   LOG(INFO) << offset_now << " " << it->second.offset << std::endl;
+        // if (it_meta->first == 0x50a544) {
+        //   LOG(INFO) << std::hex << trace.pc << " " << std::dec << offset_now
+        //             << " " << it->second.offset << std::endl;
         // }
         if (it->second.offset == 0) {
           it->second.offset = offset_now;
@@ -580,4 +599,44 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
        << total_time % 1000000 / 1000 << " us" << total_time % 1000 << " ns"
        << std::endl;
 #endif
+}
+
+void TraceList::merge(std::string input_dir, int id,
+                      unsigned long long &inst_id) {
+  auto filename = std::filesystem::path(input_dir)
+                      .append(std::to_string(id))
+                      .append("mpr.pattern")
+                      .string();
+  std::ifstream in(filename);
+  if (!in.good()) {
+    LOG(WARNING) << "Cannot open file " << filename;
+    return;
+  }
+  unsigned long long pc;
+  while (in >> std::hex >> pc) {
+    auto it = pc2meta.find(pc);
+    if (it != pc2meta.end()) {
+      auto past_pattern = it->second.pattern;
+      auto past_count = it->second.count;
+      it->second.input(in);
+      LOG_IF(WARNING, past_pattern != it->second.pattern)
+          << "Conflict Found! " << std::hex << pc << " in file " << std::dec
+          << it->second.file_id << " ("
+          << PATTERN_NAME[to_underlying(past_pattern)]
+          << ") is different from file " << id << " ("
+          << PATTERN_NAME[to_underlying(it->second.pattern)] << ").";
+      if (it->second.pattern == PATTERN::OTHER)
+        it->second.pattern = past_pattern;
+      else {
+        it->second.file_id = id;
+      }
+      inst_id += it->second.count;
+      it->second.count += past_count;
+    } else {
+      auto tmp = PCmeta();
+      tmp.input(in);
+      pc2meta[pc] = tmp;
+      inst_id += tmp.count;
+    }
+  }
 }
