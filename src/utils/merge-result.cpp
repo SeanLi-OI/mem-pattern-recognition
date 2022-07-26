@@ -56,9 +56,10 @@ int main(int argc, char *argv[]) {
     unsigned long long next_debug_print = FLAGS_debug_print_interval;
     for (int i = 1; i <= FLAGS_len; i++) {
       auto filename = std::filesystem::path(FLAGS_trace_dir)
-                          .append(std::to_string(id))
+                          .append(std::to_string(i))
                           .append("roi_trace.gz")
                           .string();
+      LOG(INFO) << "Reading trace in " << filename << std::endl;
       auto traces = get_tracereader(filename, 1, 0);
       while (true) {
         auto inst = traces->get(isend);

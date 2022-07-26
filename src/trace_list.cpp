@@ -619,7 +619,9 @@ void TraceList::merge(std::string input_dir, int id,
       auto past_pattern = it->second.pattern;
       auto past_count = it->second.count;
       it->second.input(in);
-      LOG_IF(WARNING, past_pattern != it->second.pattern)
+      LOG_IF(WARNING, past_pattern != it->second.pattern &&
+                          past_pattern != PATTERN::OTHER &&
+                          it->second.pattern != PATTERN::OTHER)
           << "Conflict Found! " << std::hex << pc << " in file " << std::dec
           << it->second.file_id << " ("
           << PATTERN_NAME[to_underlying(past_pattern)]
