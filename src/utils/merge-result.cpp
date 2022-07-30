@@ -2,6 +2,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <omp.h>
 
 #include <filesystem>
 #include <memory>
@@ -49,36 +50,39 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Reading trace in " << FLAGS_trace_dir << std::endl;
     LOG(INFO) << "Reading pattern to " << FLAGS_pattern << std::endl;
     LOG(INFO) << "Writing result to " << FLAGS_result << std::endl;
-    auto patterns = PatternList(FLAGS_pattern.c_str());
+    auto patternlist = PatternList(FLAGS_pattern.c_str());
     unsigned long long id = 0;
-    int inst_id = 0;
-    bool isend = false;
-    unsigned long long next_debug_print = FLAGS_debug_print_interval;
+#pragma omp parallel for
     for (int i = 1; i <= FLAGS_len; i++) {
       auto filename = std::filesystem::path(FLAGS_trace_dir)
                           .append(std::to_string(i))
                           .append("roi_trace.gz")
                           .string();
       LOG(INFO) << "Reading trace in " << filename << std::endl;
+      unsigned long long id_ = 0;
+      int inst_id = 0;
       auto traces = get_tracereader(filename, 1, 0);
+      bool isend = false;
+      auto patterns = PatternList(patternlist.pc2meta);
       while (true) {
         auto inst = traces->get(isend);
         if (isend) break;
         inst_id++;
-        valid_trace(patterns, id, inst.ip, inst.r0, 0, inst_id);
-        if (id == FLAGS_len && FLAGS_len != 0) break;
-        valid_trace(patterns, id, inst.ip, inst.r1, 0, inst_id);
-        if (id == FLAGS_len && FLAGS_len != 0) break;
-        valid_trace(patterns, id, inst.ip, inst.w0, 1, inst_id);
-        if (id == FLAGS_len && FLAGS_len != 0) break;
-        if (inst_id == next_debug_print) {
-          LOG(INFO) << "Finish " << std::dec << inst_id
-                    << " instructions' validation." << std::endl;
-          next_debug_print += FLAGS_debug_print_interval;
+        valid_trace(patterns, id_, inst.ip, inst.r0, 0, inst_id);
+        valid_trace(patterns, id_, inst.ip, inst.r1, 0, inst_id);
+        valid_trace(patterns, id_, inst.ip, inst.w0, 1, inst_id);
+      }
+#pragma omp critical
+      {
+        id += id_;
+        for (int j = 0; j < PATTERN_NUM; j++) {
+          patternlist.hit_count[j] += patterns.hit_count[j];
+          patternlist.all_count[j] += patterns.all_count[j];
+          patternlist.total_count[j] += patterns.total_count[j];
         }
       }
     }
-    patterns.printStats(id, FLAGS_result.c_str());
+    patternlist.printStats(id, FLAGS_result.c_str());
     LOG(INFO) << "===========Validate Merged Result End===========";
   }
   return 0;

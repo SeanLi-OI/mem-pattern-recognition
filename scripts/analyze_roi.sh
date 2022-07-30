@@ -19,9 +19,13 @@ app_dir=/home/zhoujiapeng
 # bin=${app_dir}/NPB3.3.1/NPB3.3-SER/bin/cg.A.x
 # args=""
 
-app=health
-bin=/home/lixiang/olden/health/run
-args="8 300 4"
+# app=health
+# bin=/home/lixiang/olden/health/run
+# args="8 300 4"
+
+app=$1
+bin=$2
+args=$3
 
 cd ${mpr_dir}
 mkdir -p perf-test/${app}
@@ -29,7 +33,7 @@ cd perf-test/${app}
 
 # perf record -g ${bin} ${args}
 sudo perf record -e cache-misses ${bin} ${args}
-sudo chown lixiang:lixiang perf.data
-perf script -D > perf.data.txt
-# ${mpr_dir}/build/perf-parse -cycle=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt
-${mpr_dir}/build/perf-parse -miss=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt
+sudo perf script -D > perf.data.txt
+sudo chown lixiang:lixiang perf.data.txt
+# ${mpr_dir}/build/perf-parse -cycle=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt -roi=${mpr_dir}/perf-test/${app}/roi.txt
+${mpr_dir}/build/perf-parse -miss=${mpr_dir}/perf-test/${app}/perf.data.txt -output=${mpr_dir}/perf-test/${app}/roi_raw.txt -roi=${mpr_dir}/perf-test/${app}/roi.txt

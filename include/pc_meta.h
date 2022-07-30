@@ -59,7 +59,7 @@ class PCmeta {  // Metadata for each PC
   // STRIDE
   long long int offset_stride;
   long long stride_tmp;
-  bool stride_flag;
+  short stride_flag;
 
   // common
   PATTERN pattern;

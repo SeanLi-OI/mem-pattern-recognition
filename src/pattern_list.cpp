@@ -22,10 +22,19 @@ void valid_trace(PatternList &patternList, unsigned long long &id,
 PatternList::PatternList(const char filename[]) {
   std::ifstream in(filename);
   unsigned long long pc;
+  pc2meta = std::make_shared<std::unordered_map<unsigned long long, PCmeta>>();
   while (in >> std::hex >> pc) {
-    pc2meta[pc] = PCmeta();
-    pc2meta[pc].input(in);
+    (*pc2meta)[pc] = PCmeta();
+    (*pc2meta)[pc].input(in);
   }
+  std::fill(hit_count, hit_count + PATTERN_NUM, 0);
+  std::fill(total_count, total_count + PATTERN_NUM, 0);
+  std::fill(all_count, all_count + PATTERN_NUM, 0);
+}
+
+PatternList::PatternList(
+    std::shared_ptr<std::unordered_map<unsigned long long, PCmeta>> pc2meta_) {
+  pc2meta = pc2meta_;
   std::fill(hit_count, hit_count + PATTERN_NUM, 0);
   std::fill(total_count, total_count + PATTERN_NUM, 0);
   std::fill(all_count, all_count + PATTERN_NUM, 0);
@@ -35,9 +44,10 @@ void PatternList::add_trace(unsigned long long int pc,
                             unsigned long long int addr,
                             unsigned long long int value, bool isWrite,
                             unsigned long long int &id, const int inst_id) {
-  auto it_meta = pc2meta.find(pc);
-  if (it_meta == pc2meta.end()) {
-    LOG(WARNING) << "Cannot find PC " << pc << " in pattern list." << std::endl;
+  auto it_meta = (*pc2meta).find(pc);
+  if (it_meta == (*pc2meta).end()) {
+    // LOG(WARNING) << "Cannot find PC " << pc << " in pattern list." <<
+    // std::endl;
     return;
   }
   int lastest_id = 0;
@@ -46,21 +56,21 @@ void PatternList::add_trace(unsigned long long int pc,
   switch (it_meta->second.pattern) {
     case PATTERN::pointer:
     case PATTERN::POINTER_B:
-      next_addr[pc] = pc2meta[it_meta->second.lastpc].lastvalue;
+      next_addr[pc] = (*pc2meta)[it_meta->second.lastpc].lastvalue;
       break;
     case PATTERN::INDIRECT:
       it_indirect = indirect_base_addr.find(pc);
       if (it_indirect == indirect_base_addr.end()) {
-        next_addr[pc] = pc2meta[it_meta->second.pc_value.value].lastvalue *
+        next_addr[pc] = (*pc2meta)[it_meta->second.pc_value.value].lastvalue *
                             it_meta->second.pc_value.offset +
                         it_meta->second.pc_value.addr;
       } else {
-        next_addr[pc] = pc2meta[it_meta->second.pc_value.value].lastvalue *
+        next_addr[pc] = (*pc2meta)[it_meta->second.pc_value.value].lastvalue *
                             it_meta->second.pc_value.offset +
                         it_indirect->second;
       }
       indirect_base_addr[pc] =
-          addr - pc2meta[it_meta->second.pc_value.value].lastvalue *
+          addr - (*pc2meta)[it_meta->second.pc_value.value].lastvalue *
                      it_meta->second.pc_value.offset;
       break;
     case PATTERN::STRUCT_POINTER:
@@ -68,12 +78,12 @@ void PatternList::add_trace(unsigned long long int pc,
         auto it2 = pc2id.find(c.first);
         if (it2 == pc2id.end() || it2->second < lastest_id) continue;
         lastest_id = it2->second;
-        next_addr[pc] = pc2meta[c.first].lastvalue + c.second.offset;
+        next_addr[pc] = (*pc2meta)[c.first].lastvalue + c.second.offset;
       }
       break;
     case PATTERN::POINTER_A:
-      next_addr[pc] =
-          (long long)value + it_meta->second.pointerA_offset_candidate;
+      next_addr[pc] = (long long)value + it_meta->second.lastaddr -
+                      (long long)it_meta->second.lastvalue;
       break;
     default:
       break;
@@ -85,8 +95,20 @@ void PatternList::add_trace(unsigned long long int pc,
   auto it = next_addr.find(pc);
   if (it != next_addr.end()) {
     total_count[pattern_now]++;
-    if (it->second == addr)
+    if (it->second == addr) {
+      if (it_meta->second.pattern == PATTERN::STRIDE) {
+        it_meta->second.stride_flag = 0;
+      }
       hit_count[pattern_now]++;
+    } else {
+      if (it_meta->second.pattern == PATTERN::STRIDE) {
+        if (it_meta->second.stride_flag < 2) {
+          it_meta->second.stride_flag++;
+          hit_count[pattern_now]++;
+        }
+      }
+    }
+#ifdef ENABLE_MISS_COUNT
     else {
       auto it2 = miss_count.find(pc);
       if (it2 == miss_count.end())
@@ -94,6 +116,7 @@ void PatternList::add_trace(unsigned long long int pc,
       else
         it2->second++;
     }
+#endif
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:
@@ -148,18 +171,18 @@ void PatternList::printStats(unsigned long long totalCnt,
   out << "Hit Overall : " << MY_ALIGN(hit_sum) << PERCENT(hit_sum, all_sum)
       << std::endl;
   out << "=================================================" << std::endl;
-
-  /*****************************DEBUG OUTPUT*****************************/
-  // std::vector<std::pair<unsigned long long, unsigned long long>> elems(
-  //     miss_count.begin(), miss_count.end());
-  // std::sort(elems.begin(), elems.end(),
-  //           [](std::pair<unsigned long long, unsigned long long> a,
-  //              std::pair<unsigned long long, unsigned long long> b) {
-  //             return a.second > b.second;
-  //           });
-  // for (auto &e : elems) {
-  //   std::cerr << std::hex << e.first << " " << std::dec << e.second << " "
-  //             << PATTERN_NAME[to_underlying(pc2meta[e.first].pattern)]
-  //             << std::endl;
-  // }
+#ifdef ENABLE_MISS_COUNT
+  std::vector<std::pair<unsigned long long, unsigned long long>> elems(
+      miss_count.begin(), miss_count.end());
+  std::sort(elems.begin(), elems.end(),
+            [](std::pair<unsigned long long, unsigned long long> a,
+               std::pair<unsigned long long, unsigned long long> b) {
+              return a.second > b.second;
+            });
+  for (auto &e : elems) {
+    std::cerr << std::hex << e.first << " " << std::dec << e.second << " "
+              << PATTERN_NAME[to_underlying((*pc2meta)[e.first].pattern)]
+              << std::endl;
+  }
+#endif
 }

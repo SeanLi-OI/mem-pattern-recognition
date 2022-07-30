@@ -16,3 +16,5 @@ asm/
 syf-test/
 tmp/
 mcf_with_roi_syf/
+result.old.220723/
+scripts/

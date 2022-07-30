@@ -7,7 +7,7 @@ champsim_dir=${PWD}/external/ChampSim
 bench_dir=${mpr_dir}/test-cases
 trace_dir=${mpr_dir}/trace
 result_dir=${mpr_dir}/result
-RUN_UNION_TRACE=true
+RUN_UNION_TRACE=false
 RUN_MPR=true
 RUN_CHAMPSIM=true
 RUN_VALIDATE=true
@@ -46,10 +46,11 @@ fi
 # Get pattern from MPR
 stat_file=${result_dir}/${app}/${app}.stat
 pattern_file=${result_dir}/${app}/${app}.pattern
+hotregion_file=${result_dir}/${app}/${app}.hotregion
 if [ "$RUN_MPR" = true ] ; then
     mkdir -p ${result_dir}/${app}
-    echo ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} 2>${result_dir}/${app}/mpr_err.txt
-    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} 2>${result_dir}/${app}/mpr_err.txt &
+    echo ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregion=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
+    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregion=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
 fi
 
 # Get miss from Champsim

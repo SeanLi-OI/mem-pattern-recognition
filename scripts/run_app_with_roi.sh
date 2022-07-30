@@ -1,8 +1,8 @@
 #!/bin/bash
 mpr_dir=/home/lixiang/mem-pattern-recognition
-trace_dir=/mnt/centos00-home/lixiang/trace
-result_dir=${mpr_dir}/result
-champsim_dir=/home/lixiang/ChampSim
+trace_dir=/mnt/centos00-home/lixiang/trace/mybench
+result_dir=${mpr_dir}/result/mybench
+champsim_dir=${mpr_dir}/external/ChampSim
 RUN_UNION_TRACE=$6
 RUN_MPR=$7
 RUN_CHAMPSIM=$8
@@ -30,7 +30,8 @@ if [ "$RUN_UNION_TRACE" = true ] ; then
     if [ -f "$mpr_trace_file" ] ; then
         rm "$mpr_trace_file"
     fi
-    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer_with_roi.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -r ${roi_file} -- ${binary_file} ${app_input}
+    echo pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer_with_roi.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -r ${roi_file} -- ${binary_file} ${app_input}
+    pin -t /home/lixiang/mem-pattern-recognition/tracer/obj-intel64/union_tracer_with_roi.so -o ${champsim_trace_file} -m ${mpr_trace_file} -t ${trace_len} -s ${skip_len} -r ${roi_file} 2>${result_dir}/${app}/trace_err.txt -- ${binary_file} ${app_input}
     gzip -c ${mpr_trace_file} > ${mpr_trace_file}.gz &
     gzip -c ${champsim_trace_file} > ${champsim_trace_file}.gz &
     wait
@@ -45,9 +46,10 @@ fi
 # Get pattern from MPR
 stat_file=${result_dir}/${app}/${app}.stat
 pattern_file=${result_dir}/${app}/${app}.pattern
+hotregion_file=${result_dir}/${app}/${app}.hotregion
 if [ "$RUN_MPR" = true ] ; then
     mkdir -p ${result_dir}/${app}
-    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file}.gz -stat=${stat_file} -pattern=${pattern_file} -len=${trace_len} 2>${result_dir}/${app}/mpr_err.txt &
+    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file}.gz -stat=${stat_file} -pattern=${pattern_file} -len=${trace_len} -hotregionresult=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
 fi
 
 # Get miss from Champsim
@@ -55,6 +57,7 @@ miss_file=${result_dir}/${app}/${app}.miss
 if [ "$RUN_CHAMPSIM" = true ] ; then
     mkdir -p ${result_dir}/${app}
     ${champsim_dir}/bin/champsim --warmup_instructions 0 --simulation_instructions ${trace_len} ${champsim_trace_file}.gz 2>${miss_file} &
+    ${champsim_dir}/bin/champsim_ip_stride --warmup_instructions 0 --simulation_instructions ${trace_len} ${champsim_trace_file}.gz 2>${miss_file}.ipstride &
 fi
 wait
 if [[ "$RUN_MPR" = true || "$RUN_CHAMPSIM" = true ]]; then
@@ -71,6 +74,7 @@ fi
 if [ "$RUN_PARSER" = true ] ; then
     out_file=${result_dir}/${app}/${app}.csv
     ${mpr_dir}/build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt &
+    ${mpr_dir}/build/pattern2line ${miss_file}.ipstride ${pattern_file} ${out_file}.ipstride ${binary_file} 2>${result_dir}/${app}/parse_err_ipstride.txt &
 fi
 wait
 
