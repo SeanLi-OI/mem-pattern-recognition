@@ -154,8 +154,8 @@ bool TraceList::check_pointerA_pattern(
       if (it_meta->second.pointerA_tmp >= POINTER_A_THERSHOLD)
         it_meta->second.maybe_pattern[to_underlying(PATTERN::POINTER_A)] = true;
     } else {
-      if (it_meta->second.pointerA_tmp > 0)
-        it_meta->second.pointerA_tmp -= 2;
+      if (it_meta->second.pointerA_tmp > 2)
+        it_meta->second.pointerA_tmp /= 2;
       else if (it_meta->second
                    .maybe_pattern[to_underlying(PATTERN::POINTER_A)] == true)
         it_meta->second.is_not_pattern[to_underlying(PATTERN::POINTER_A)] =
@@ -198,24 +198,24 @@ bool TraceList::check_indirect_pattern(
                          abs_sub(trace.value, it->second.value);
             if (offset_now != 2 && offset_now != 4 && offset_now != 8 &&
                 offset_now != 16) {
-              it->second.confidence--;
-              if (it->second.confidence > 0) {
+              it->second.confidence /= 2;
+              if (it->second.confidence > 2) {
                 tmp[trace.pc] = it->second;
               }
               continue;
             }
             if (it->second.offset == 0) {
               it->second.offset = offset_now;
-              it->second.confidence = 0;
+              it->second.confidence = 8;
               tmp[trace.pc] = it->second;
             } else if (it->second.offset == offset_now) {
               it->second.confidence++;
               tmp[trace.pc] = it->second;
             } else {
-              it->second.confidence--;
-              if (it->second.confidence < 0) {
+              it->second.confidence /= 2;
+              if (it->second.confidence <= 2) {
                 it->second.offset = offset_now;
-                it->second.confidence = 0;
+                it->second.confidence = 8;
               }
               tmp[trace.pc] = it->second;
             }

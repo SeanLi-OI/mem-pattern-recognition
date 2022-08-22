@@ -39,14 +39,14 @@ constexpr auto to_underlying(E e) noexcept {
   return static_cast<std::underlying_type_t<E>>(e);
 }
 
-const uint32_t INTERVAL = 128;
-const uint16_t STRIDE_THERSHOLD = 32;
-const uint16_t POINTER_A_THERSHOLD = 32;
-const uint16_t INDIRECT_THERSHOLD = 32;
-const uint16_t PATTERN_THERSHOLD = 32;
-const uint16_t POINTER_THERSHOLD = 32;
-const uint16_t CHAIN_THERSHOLD = 32;
+const uint32_t INTERVAL = 256;
+const uint16_t STRIDE_THERSHOLD = 256;
+const uint16_t POINTER_A_THERSHOLD = 256;
+const uint16_t INDIRECT_THERSHOLD = 256;
+const uint16_t PATTERN_THERSHOLD = 256;
+const uint16_t POINTER_THERSHOLD = 256;
+const uint16_t CHAIN_THERSHOLD = 256;
 const uint16_t STATIC_THERSHOLD = 256;
-const uint16_t STRUCT_POINTER_THERSHOLD = 32;
+const uint16_t STRUCT_POINTER_THERSHOLD = 256;
 
 #endif

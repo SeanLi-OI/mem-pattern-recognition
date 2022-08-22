@@ -79,14 +79,14 @@ class PCmeta {  // Metadata for each PC
     confirm = 0;
     offset_stride = 0;
     stride_tmp = 0;
-    pointerA_tmp = 0;
+    pointerA_tmp = 8;
     static_tmp = 0;
     pointerA_offset_candidate = -1;
     maybe_pointer_chase = 0;
     pattern = PATTERN::OTHER;
     stride_flag = false;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      pattern_confidence[i] = 0;
+      pattern_confidence[i] = 8;
       maybe_pattern[i] = false;
       is_not_pattern[i] = false;
     }

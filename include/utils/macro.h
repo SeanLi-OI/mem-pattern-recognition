@@ -7,6 +7,10 @@
 #include <iostream>
 #include <string>
 
+#define RAW_PERCENT(CNT, TOTAL)               \
+  std::setprecision(4) << (((TOTAL) == 0) ? 0 \
+                                          : ((CNT) * (double)100.0 / (TOTAL)))
+
 #define PERCENT(CNT, TOTAL)     \
   "  (" << std::setprecision(4) \
         << (((TOTAL) == 0) ? 0 : ((CNT) * (double)100.0 / (TOTAL))) << "%)"
@@ -15,9 +19,11 @@
   "  (" << (CNT >= 0 ? "+" : "") << std::setprecision(4) \
         << (((TOTAL) == 0) ? 0 : ((CNT) * (double)100.0 / (TOTAL))) << "%)"
 
-#define MY_ALIGN(n) std::left << std::setw(12) << (n)
+#define MY_ALIGN(n) std::left << std::setw(12) << n
 
-#define MY_ALIGN_STR(s) std::left << std::setw(15) << std::setfill(' ') << (s)
+#define MY_ALIGN_W(n, w) std::left << std::setw(w) << n
+
+#define MY_ALIGN_STR(s) std::left << std::setw(15) << std::setfill(' ') << s
 
 #define DIFF(n1, n2)                                    \
   (std::string("(") + std::string(n1 > n2 ? "+" : "") + \
