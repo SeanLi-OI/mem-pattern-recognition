@@ -27,6 +27,11 @@ int main(int argc, char *argv[]) {
   FLAGS_result_dir = std::filesystem::absolute(FLAGS_result_dir);
   double sum_c = 0, sum_a = 0;
   int num = 0;
+  FLAGS_output = std::filesystem::absolute(FLAGS_output);
+  std::ofstream fout2(FLAGS_output);
+  if (!fout2.good()) {
+    LOG(FATAL) << "Cannot open output file " << FLAGS_output << std::endl;
+  }
   for (auto const &dir_entry : std::filesystem::directory_iterator{
            std::filesystem::path{FLAGS_result_dir}}) {
     std::string res_file = dir_entry.path() / "mpr.res";
@@ -54,7 +59,7 @@ int main(int argc, char *argv[]) {
         std::cout << MY_ALIGN_W(accurancy, 6) << std::endl;
       }
     }
-    num++;
+    if (sum_c != 0) num++;
     std::string stat_file = dir_entry.path() / "mpr.stat";
     std::ifstream fin2(stat_file);
     if (!fin2.good()) {
@@ -62,12 +67,6 @@ int main(int argc, char *argv[]) {
       continue;
     }
     LOG(INFO) << "Parsing " << res_file << std::endl;
-    FLAGS_output = std::filesystem::absolute(FLAGS_output);
-    std::ofstream fout2(FLAGS_output);
-    if (!fout2.good()) {
-      LOG(WARNING) << "Cannot open output file " << FLAGS_output << std::endl;
-      continue;
-    }
     bool flag = false;
     fout2 << app;
     while (std::getline(fin2, str)) {
@@ -82,6 +81,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+    fout2 << std::endl;
   }
   std::cout << MY_ALIGN_W("Average", 35)
             << MY_ALIGN_W(RAW_PERCENT(sum_c / 100.0, num), 6)

@@ -30,6 +30,7 @@ PatternList::PatternList(const char filename[]) {
   std::fill(hit_count, hit_count + PATTERN_NUM, 0);
   std::fill(total_count, total_count + PATTERN_NUM, 0);
   std::fill(all_count, all_count + PATTERN_NUM, 0);
+  enable_roi = false;
 }
 
 PatternList::PatternList(
@@ -38,6 +39,16 @@ PatternList::PatternList(
   std::fill(hit_count, hit_count + PATTERN_NUM, 0);
   std::fill(total_count, total_count + PATTERN_NUM, 0);
   std::fill(all_count, all_count + PATTERN_NUM, 0);
+  enable_roi = false;
+}
+
+void PatternList::add_roi(const char filename[]) {
+  enable_roi = true;
+  std::ifstream in(filename);
+  unsigned long long pc1, pc2;
+  while (in >> std::hex >> pc1 >> pc2) {
+    roi_pairs.push_back(std::make_pair(pc1, pc2));
+  }
 }
 
 void PatternList::add_trace(unsigned long long int pc,
@@ -88,35 +99,44 @@ void PatternList::add_trace(unsigned long long int pc,
     default:
       break;
   }
-  auto pattern_now = to_underlying(it_meta->second.maybe_pointer_chase
-                                       ? PATTERN::POINTER_A
-                                       : it_meta->second.pattern);
-  all_count[pattern_now]++;
-  auto it = next_addr.find(pc);
-  if (it != next_addr.end()) {
-    total_count[pattern_now]++;
-    if (it->second == addr) {
-      if (it_meta->second.pattern == PATTERN::STRIDE) {
-        it_meta->second.stride_flag = 0;
-      }
-      hit_count[pattern_now]++;
-    } else {
-      if (it_meta->second.pattern == PATTERN::STRIDE) {
-        if (it_meta->second.stride_flag < 2) {
-          it_meta->second.stride_flag++;
-          hit_count[pattern_now]++;
+  bool flag = !enable_roi;
+  for (auto &roi : roi_pairs) {
+    if (pc >= roi.first && pc <= roi.second) {
+      flag = true;
+      break;
+    }
+  }
+  if (flag) {
+    auto pattern_now = to_underlying(it_meta->second.maybe_pointer_chase
+                                         ? PATTERN::POINTER_A
+                                         : it_meta->second.pattern);
+    all_count[pattern_now]++;
+    auto it = next_addr.find(pc);
+    if (it != next_addr.end()) {
+      total_count[pattern_now]++;
+      if (it->second == addr) {
+        if (it_meta->second.pattern == PATTERN::STRIDE) {
+          it_meta->second.stride_flag = 0;
+        }
+        hit_count[pattern_now]++;
+      } else {
+        if (it_meta->second.pattern == PATTERN::STRIDE) {
+          if (it_meta->second.stride_flag < 2) {
+            it_meta->second.stride_flag++;
+            hit_count[pattern_now]++;
+          }
         }
       }
-    }
 #ifdef ENABLE_MISS_COUNT
-    else {
-      auto it2 = miss_count.find(pc);
-      if (it2 == miss_count.end())
-        miss_count[pc] = 1;
-      else
-        it2->second++;
-    }
+      else {
+        auto it2 = miss_count.find(pc);
+        if (it2 == miss_count.end())
+          miss_count[pc] = 1;
+        else
+          it2->second++;
+      }
 #endif
+    }
   }
   switch (it_meta->second.pattern) {
     case PATTERN::STATIC:

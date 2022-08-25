@@ -14,11 +14,13 @@
 
 DEFINE_bool(analyze_result, false, "Do analyze");
 DEFINE_bool(validate_result, false, "Do validate");
+DEFINE_bool(enable_roi, false, "enable roi");
 DEFINE_string(input_dir, "", "input dir");
 DEFINE_string(trace_dir, "", "trace dir");
 DEFINE_string(stat, "mpr.stat", "stat file");
 DEFINE_string(pattern, "mpr.pattern", "pattern file");
 DEFINE_string(result, "mpr.res", "validate result");
+DEFINE_string(roi, "", "roi file path");
 DEFINE_uint64(len, 0, "len");
 DEFINE_uint64(debug_print_interval, 10000000, "Size of debug print interval");
 
@@ -58,32 +60,46 @@ int main(int argc, char *argv[]) {
                           .append(std::to_string(i))
                           .append("roi_trace.gz")
                           .string();
-      LOG(INFO) << "Reading trace in " << filename << std::endl;
-      unsigned long long id_ = 0;
-      int inst_id = 0;
-      auto traces = get_tracereader(filename, 1, 0);
-      bool isend = false;
-      auto patterns = PatternList(patternlist.pc2meta);
-      while (true) {
-        auto inst = traces->get(isend);
-        if (isend) break;
-        inst_id++;
-        valid_trace(patterns, id_, inst.ip, inst.r0, 0, inst_id);
-        valid_trace(patterns, id_, inst.ip, inst.r1, 0, inst_id);
-        valid_trace(patterns, id_, inst.ip, inst.w0, 1, inst_id);
+      if (!std::filesystem::exists(filename)) {
+        filename = std::filesystem::path(FLAGS_trace_dir)
+                       .append(std::to_string(i))
+                       .append("trace.log.gz")
+                       .string();
       }
+      if (!std::filesystem::exists(filename)) {
+        LOG(WARNING) << "TRACE FILE NOT FOUND: " << filename << std::endl;
+      } else {
+        LOG(INFO) << "Reading trace in " << filename << std::endl;
+        unsigned long long id_ = 0;
+        int inst_id = 0;
+        auto traces = get_tracereader(filename, 1, 0);
+        bool isend = false;
+        auto patterns = PatternList(patternlist.pc2meta);
+        if (FLAGS_enable_roi) {
+          FLAGS_roi = std::filesystem::absolute(FLAGS_roi);
+          patterns.add_roi(FLAGS_roi.c_str());
+        }
+        while (true) {
+          auto inst = traces->get(isend);
+          if (isend) break;
+          inst_id++;
+          valid_trace(patterns, id_, inst.ip, inst.r0, 0, inst_id);
+          valid_trace(patterns, id_, inst.ip, inst.r1, 0, inst_id);
+          valid_trace(patterns, id_, inst.ip, inst.w0, 1, inst_id);
+        }
 #pragma omp critical
-      {
-        id += id_;
-        for (int j = 0; j < PATTERN_NUM; j++) {
-          patternlist.hit_count[j] += patterns.hit_count[j];
-          patternlist.all_count[j] += patterns.all_count[j];
-          patternlist.total_count[j] += patterns.total_count[j];
+        {
+          id += id_;
+          for (int j = 0; j < PATTERN_NUM; j++) {
+            patternlist.hit_count[j] += patterns.hit_count[j];
+            patternlist.all_count[j] += patterns.all_count[j];
+            patternlist.total_count[j] += patterns.total_count[j];
+          }
         }
       }
+      patternlist.printStats(id, FLAGS_result.c_str());
+      LOG(INFO) << "===========Validate Merged Result End===========";
     }
-    patternlist.printStats(id, FLAGS_result.c_str());
-    LOG(INFO) << "===========Validate Merged Result End===========";
   }
   return 0;
 }

@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "instruction.h"
 #include "pc_meta.h"
@@ -14,6 +15,8 @@ class PatternList {
   std::unordered_map<unsigned long long, unsigned long long> next_addr;
   std::unordered_map<unsigned long long, unsigned long long> indirect_base_addr;
   std::unordered_map<unsigned long long, unsigned long long> pc2id;
+  std::vector<std::pair<unsigned long long, unsigned long long>> roi_pairs;
+  bool enable_roi;
 
 #ifdef ENABLE_MISS_COUNT
   std::unordered_map<unsigned long long, unsigned long long> miss_count;
@@ -28,6 +31,7 @@ class PatternList {
   PatternList(const char filename[]);
   PatternList(
       std::shared_ptr<std::unordered_map<unsigned long long, PCmeta>> pc2meta_);
+  void add_roi(const char filename[]);
   void add_trace(unsigned long long int pc, unsigned long long int addr,
                  unsigned long long int value, bool isWrite,
                  unsigned long long int &id, const int inst_id);
