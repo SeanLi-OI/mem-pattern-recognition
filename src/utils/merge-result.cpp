@@ -38,8 +38,12 @@ int main(int argc, char *argv[]) {
     auto traceList = TraceList(0, false);
     traceList.add_outfile(FLAGS_pattern.c_str());
     unsigned long long inst_id = 0;
-    for (int i = 1; i <= FLAGS_len; i++) {
-      traceList.merge(FLAGS_input_dir, i, inst_id);
+    if (FLAGS_len != 0) {
+      for (int i = 1; i <= FLAGS_len; i++) {
+        traceList.merge(FLAGS_input_dir, std::to_string(i), inst_id);
+      }
+    } else {
+      traceList.merge(FLAGS_input_dir, "all", inst_id);
     }
     traceList.printStats(inst_id, FLAGS_stat.c_str());
     LOG(INFO) << "============Merge Analyze Result End============";
@@ -54,18 +58,58 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Writing result to " << FLAGS_result << std::endl;
     auto patternlist = PatternList(FLAGS_pattern.c_str());
     unsigned long long id = 0;
+    if (FLAGS_len != 0) {
 #pragma omp parallel for
-    for (int i = 1; i <= FLAGS_len; i++) {
-      auto filename = std::filesystem::path(FLAGS_trace_dir)
-                          .append(std::to_string(i))
-                          .append("roi_trace.gz")
-                          .string();
-      if (!std::filesystem::exists(filename)) {
-        filename = std::filesystem::path(FLAGS_trace_dir)
-                       .append(std::to_string(i))
-                       .append("trace.log.gz")
-                       .string();
+      for (int i = 1; i <= FLAGS_len; i++) {
+        auto filename = std::filesystem::path(FLAGS_trace_dir)
+                            .append(std::to_string(i))
+                            .append("roi_trace.gz")
+                            .string();
+        if (!std::filesystem::exists(filename)) {
+          filename = std::filesystem::path(FLAGS_trace_dir)
+                         .append(std::to_string(i))
+                         .append("trace.log.gz")
+                         .string();
+        }
+        if (!std::filesystem::exists(filename)) {
+          LOG(WARNING) << "TRACE FILE NOT FOUND: " << filename << std::endl;
+        } else {
+          LOG(INFO) << "Reading trace in " << filename << std::endl;
+          unsigned long long id_ = 0;
+          int inst_id = 0;
+          auto traces = get_tracereader(filename, 1, 0);
+          bool isend = false;
+          auto patterns = PatternList(patternlist.pc2meta);
+          if (FLAGS_enable_roi) {
+            FLAGS_roi = std::filesystem::absolute(FLAGS_roi);
+            patterns.add_roi(FLAGS_roi.c_str());
+          }
+          while (true) {
+            auto inst = traces->get(isend);
+            if (isend) break;
+            inst_id++;
+            valid_trace(patterns, id_, inst.ip, inst.r0, 0, inst_id);
+            valid_trace(patterns, id_, inst.ip, inst.r1, 0, inst_id);
+            valid_trace(patterns, id_, inst.ip, inst.w0, 1, inst_id);
+          }
+#pragma omp critical
+          {
+            id += id_;
+            for (int j = 0; j < PATTERN_NUM; j++) {
+              patternlist.hit_count[j] += patterns.hit_count[j];
+              patternlist.all_count[j] += patterns.all_count[j];
+              patternlist.total_count[j] += patterns.total_count[j];
+            }
+          }
+        }
+        patternlist.printStats(id, FLAGS_result.c_str());
+        LOG(INFO) << "===========Validate Merged Result End===========";
       }
+    } else {
+      auto filename = std::filesystem::path(FLAGS_trace_dir)
+                          .append("all")
+                          .append("trace.log.gz")
+                          .string();
       if (!std::filesystem::exists(filename)) {
         LOG(WARNING) << "TRACE FILE NOT FOUND: " << filename << std::endl;
       } else {
@@ -87,14 +131,11 @@ int main(int argc, char *argv[]) {
           valid_trace(patterns, id_, inst.ip, inst.r1, 0, inst_id);
           valid_trace(patterns, id_, inst.ip, inst.w0, 1, inst_id);
         }
-#pragma omp critical
-        {
-          id += id_;
-          for (int j = 0; j < PATTERN_NUM; j++) {
-            patternlist.hit_count[j] += patterns.hit_count[j];
-            patternlist.all_count[j] += patterns.all_count[j];
-            patternlist.total_count[j] += patterns.total_count[j];
-          }
+        id += id_;
+        for (int j = 0; j < PATTERN_NUM; j++) {
+          patternlist.hit_count[j] += patterns.hit_count[j];
+          patternlist.all_count[j] += patterns.all_count[j];
+          patternlist.total_count[j] += patterns.total_count[j];
         }
       }
       patternlist.printStats(id, FLAGS_result.c_str());

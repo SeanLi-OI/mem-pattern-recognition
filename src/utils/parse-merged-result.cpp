@@ -60,15 +60,23 @@ int main(int argc, char *argv[]) {
       }
     }
     if (sum_c != 0) num++;
+  }
+  for (auto const &dir_entry : std::filesystem::directory_iterator{
+           std::filesystem::path{FLAGS_result_dir}}) {
     std::string stat_file = dir_entry.path() / "mpr.stat";
     std::ifstream fin2(stat_file);
     if (!fin2.good()) {
-      LOG(WARNING) << "Cannot open stat file " << res_file << std::endl;
+      LOG(WARNING) << "Cannot open stat file " << stat_file << std::endl;
       continue;
     }
-    LOG(INFO) << "Parsing " << res_file << std::endl;
+    LOG(INFO) << "Parsing " << stat_file << std::endl;
+    std::string app;
+    for (auto &s : dir_entry.path()) {
+      if (s != "") app = s;
+    }
     bool flag = false;
     fout2 << app;
+    std::string str;
     while (std::getline(fin2, str)) {
       if (str[0] == '=') {
         if (!flag)

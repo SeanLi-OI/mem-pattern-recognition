@@ -40,13 +40,13 @@ constexpr auto to_underlying(E e) noexcept {
 }
 
 const uint32_t INTERVAL = 256;
-const uint16_t STRIDE_THERSHOLD = 256;
-const uint16_t POINTER_A_THERSHOLD = 256;
-const uint16_t INDIRECT_THERSHOLD = 256;
-const uint16_t PATTERN_THERSHOLD = 256;
-const uint16_t POINTER_THERSHOLD = 256;
-const uint16_t CHAIN_THERSHOLD = 256;
-const uint16_t STATIC_THERSHOLD = 256;
-const uint16_t STRUCT_POINTER_THERSHOLD = 256;
+const uint16_t STRIDE_THERSHOLD = 512;
+const uint16_t POINTER_A_THERSHOLD = 512;
+const uint16_t INDIRECT_THERSHOLD = 512;
+const uint16_t PATTERN_THERSHOLD = 512;
+const uint16_t POINTER_THERSHOLD = 512;
+const uint16_t CHAIN_THERSHOLD = 512;
+const uint16_t STATIC_THERSHOLD = 512;
+const uint16_t STRUCT_POINTER_THERSHOLD = 512;
 
 #endif

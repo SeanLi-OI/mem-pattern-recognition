@@ -71,7 +71,7 @@ class PCmeta {  // Metadata for each PC
   bool maybe_pointer_chase;
 
   // for merge
-  unsigned file_id;
+  std::string file_id;
   // std::vector<int> inst_id_list;
   PCmeta() {
     lastaddr = lastaddr_2 = 0;

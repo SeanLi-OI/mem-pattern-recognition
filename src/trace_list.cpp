@@ -273,7 +273,10 @@ bool TraceList::check_struct_pointer_pattern(
         it_meta->second.meeted_pc_sp.end()) {
       if (it != it_meta->second.struct_pointer_candidate.end()) {
         if (!flag) {
-          tmp.erase(tmp.find(trace.pc));
+          it->second.confidence /= 2;
+          if (it->second.confidence <= 2) {
+            tmp.erase(tmp.find(trace.pc));
+          }
           flag = true;
         }
         // if (it_meta->first == 0x50a544) {
@@ -282,6 +285,7 @@ bool TraceList::check_struct_pointer_pattern(
         // }
         if (it->second.offset == 0) {
           it->second.offset = offset_now;
+          it->second.confidence = 8;
           tmp[trace.pc] = it->second;
         } else {
           if (offset_now == it->second.offset) {
@@ -601,10 +605,10 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
 #endif
 }
 
-void TraceList::merge(std::string input_dir, int id,
+void TraceList::merge(std::string input_dir, std::string id,
                       unsigned long long &inst_id) {
   auto filename = std::filesystem::path(input_dir)
-                      .append(std::to_string(id))
+                      .append(id)
                       .append("mpr.pattern")
                       .string();
   std::ifstream in(filename);

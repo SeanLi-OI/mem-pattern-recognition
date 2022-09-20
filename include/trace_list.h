@@ -101,7 +101,8 @@ class TraceList {
   void printStats(unsigned long long totalCnt, const char filename[],
                   const char hot_region_file[] = "");
 
-  void merge(std::string input_dir, int id, unsigned long long &inst_id);
+  void merge(std::string input_dir, std::string id,
+             unsigned long long &inst_id);
 };
 
 void add_trace(TraceList &traceList, unsigned long long &id,

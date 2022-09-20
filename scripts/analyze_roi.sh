@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mpr_dir=/home/lixiang/mem-pattern-recognition
+mpr_dir=/data/lixiang/mem-pattern-recognition
 app_dir=/home/zhoujiapeng
 
 # app=pagerank
