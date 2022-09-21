@@ -1,11 +1,10 @@
 #!/bin/bash
-trace_dir=/mnt/centos00-home/riscv-recovery/
+trace_dir=/data/lixiang/riscv-recovery/
 mpr_dir=/data/lixiang/mem-pattern-recognition/
 result_dir=${mpr_dir}/new_bench/result/
 
 lock_file=/home/lixiang/.my_lock_file
-max_concurrent=10
-sema=0
+max_concurrent=20
 
 apps=()
 
@@ -53,63 +52,46 @@ get_all_apps_from_dir() {
 
 len=100
 
-add() {
-    if [ ${sema} -lt ${max_concurrent} ]; then
-        sema=$(($sema + 1))
-        return 1
-    fi
-    return 0
-}
-decrease() {
-    sema=$((${sema} - 1))
-}
-
 init_lock() {
-    if [ -f ${lock_file} -o -d ${lock_file} ]; then
-        rm -r ${lock_file}
-    fi
+    local id
+    for id in $(seq 1 $max_concurrent); do
+        if [ -f "${lock_file}_${id}" -o -d "${lock_file}_${id}" ]; then
+            rm -r "${lock_file}_${id}"
+        fi
+    done
 }
 
 get_lock() {
+    local id
     while true; do
-        mkdir "${lock_file}" 2>/dev/null
-        if [ $? -eq 0 ]; then
-            add
-            if [ $? -eq 1 ]; then
-                rm -rf ${lock_file}
-                break
+        for id in $(seq 1 $max_concurrent); do
+            mkdir "${lock_file}_${id}" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                return ${id}
             fi
-            rm -rf ${lock_file}
-        fi
-        sleep 10
+            sleep 1
+        done
     done
 }
 
 release_lock() {
-    while true; do
-        mkdir "${lock_file}" 2>/dev/null
-        if [ $? -eq 0 ]; then
-            decrease
-            rm -rf ${lock_file}
-            break
-        fi
-        sleep 10
-    done
+    rm -r "${lock_file}_$1"
 }
 
 do_analyze() {
     get_lock
+    local lock_id=$?
     echo "Start job $2 $1"
-    mkdir -p ${result_dir}/${app}/${id}
-    if [ -f ${result_dir}/${app}/${id}/mpr.res ]; then
+    mkdir -p ${result_dir}/${app}/$1
+    if [ -f ${result_dir}/${app}/$1/mpr.res ]; then
         echo "Already finished job $2 $1"
     else
-        trace_path=${trace_dir}/${app}/${id}/roi_trace.gz
+        trace_path=${trace_dir}/${app}/$1/roi_trace.gz
         if [ ! -f ${trace_path} ]; then
-            trace_path=${trace_dir}/${app}/${id}/trace.log.gz
+            trace_path=${trace_dir}/${app}/$1/trace.log.gz
             if [ ! -f ${trace_path} ]; then
                 echo "Cannot find trace ${trace_path} for job $2 $1"
-                release_lock
+                release_lock ${lock_id}
                 return
             fi
         fi
@@ -117,19 +99,19 @@ do_analyze() {
             --analyze \
             --validate \
             -trace=${trace_path} \
-            -pattern=${result_dir}/${app}/${id}/mpr.pattern \
-            -stat=${result_dir}/${app}/${id}/mpr.stat \
-            -result=${result_dir}/${app}/${id}/mpr.res \
-            >${result_dir}/${app}/${id}/mpr.stdout \
-            2>${result_dir}/${app}/${id}/mpr.stderr
-        ret=$?
+            -pattern=${result_dir}/${app}/$1/mpr.pattern \
+            -stat=${result_dir}/${app}/$1/mpr.stat \
+            -result=${result_dir}/${app}/$1/mpr.res \
+            >${result_dir}/${app}/$1/mpr.stdout \
+            2>${result_dir}/${app}/$1/mpr.stderr
         echo "Finish job $2 $1 with code $?"
     fi
-    release_lock
+    release_lock ${lock_id}
 }
 
 do_merge() {
     get_lock
+    local lock_id=$?
     if [ $2 -eq 0 ]; then
         ${mpr_dir}/build/merge-result \
             --analyze_result \
@@ -158,10 +140,10 @@ do_merge() {
 
         echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${mpr_dir}/new_bench/result/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern -stat=${mpr_dir}/new_bench/result/$1/mpr.stat -result=${mpr_dir}/new_bench/result/$1/mpr.res " exit with code" $?
     fi
-    release_lock
+    release_lock ${lock_id}
 }
 do_merge_only_validate() {
-    if [ ! -f ${result_dir}/${app}/${id}/mpr.res ]; then
+    if [ ! -f ${result_dir}/${app}/$1/mpr.res ]; then
         echo ${mpr_dir}/build/merge-result --validate_result -input_dir=${mpr_dir}/new_bench/result/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern -stat=${mpr_dir}/new_bench/result/$1/mpr.stat -result=${mpr_dir}/new_bench/result/$1/mpr.res --enable_roi -roi=${mpr_dir}/perf-test/${app}/roi.txt
         ${mpr_dir}/build/merge-result \
             --validate_result \
@@ -179,16 +161,19 @@ do_merge_only_validate() {
 }
 
 job_v1() {
+    local id
     init_lock
     for app in "${apps[@]}"; do
-        if [ ! -d ${result_dir}/${app}/all ]; then
-            for id in $(seq 1 $len); do
-                do_analyze $id $app &
-                sleep 5
-            done
+        if [ ! -d ${trace_dir}/${app}/all ]; then
+            echo ${app}
+            # for id in $(seq 1 $len); do
+            #     do_analyze $id $app &
+            #     sleep 1
+            # done
         else
+            rm -rf ${result_dir}/${app}
             do_analyze "all" $app &
-            sleep 5
+            sleep 1
         fi
     done
     wait
@@ -196,7 +181,7 @@ job_v1() {
 
 job_v2() {
     for app in "${apps[@]}"; do
-        if [ ! -d ${result_dir}/${app}/all ]; then
+        if [ ! -d ${trace_dir}/${app}/all ]; then
             # do_merge $app 1
             echo "skip ${app}"
         else
@@ -206,9 +191,10 @@ job_v2() {
 }
 
 job_all() {
+    local id
     init_lock
     for app in "${apps[@]}"; do
-        if [ ! -d ${result_dir}/${app}/all ]; then
+        if [ ! -d ${trace_dir}/${app}/all ]; then
             for id in $(seq 1 $len); do
                 do_analyze $id $app &
                 sleep 5
