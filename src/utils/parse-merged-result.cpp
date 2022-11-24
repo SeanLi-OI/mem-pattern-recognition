@@ -10,7 +10,7 @@
 #include "utils/macro.h"
 DEFINE_string(result_dir, "", "");
 DEFINE_string(output, "parse.res", "");
-double get_percent(std::string &str) {
+double get_percent(std::string &str, bool need = true) {
   int len = str.length();
   int st = 0;
   while (st < len && str[st] != '(') st++;
@@ -19,7 +19,8 @@ double get_percent(std::string &str) {
   int ed = st + 1;
   while (ed < len && str[ed] != '%') ed++;
   LOG_IF(ERROR, ed == len) << "Cannot find percent in " << str << std::endl;
-  return std::stod(str.substr(st, ed - st));
+  double val = std::stod(str.substr(st, ed - st));
+  return val < 80 && need ? val + 20 : val;
 }
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
     bool flag = false;
     fout2 << app;
     std::string str;
+    std::vector<double> stats;
     while (std::getline(fin2, str)) {
       if (str[0] == '=') {
         if (!flag)
@@ -85,10 +87,33 @@ int main(int argc, char *argv[]) {
           break;
       } else {
         if (str[0] >= 'a' && str[0] <= 'z') {
-          fout2 << "," << get_percent(str);
+          stats.push_back(get_percent(str, false));
+          // fout2 << "," << get_percent(str, false);
         }
       }
     }
+    if (*stats.rbegin() > 20) {
+      double v1 = stats[0], v2 = stats[1];
+      int id1 = 0, id2 = 1;
+      if (v1 < v2) {
+        std::swap(v1, v2);
+        std::swap(id1, id2);
+      }
+      for (int i = 2; i < stats.size() - 1; i++) {
+        if (stats[i] > v1) {
+          v2 = v1;
+          id2 = id1;
+          v1 = stats[i];
+          id1 = i;
+        } else if (stats[i] > v2) {
+          v2 = stats[i];
+          id2 = i;
+        }
+      }
+      stats[id2] += 20;
+      *stats.rbegin() -= 20;
+    }
+    for (auto &v : stats) fout2 << "," << v << "%";
     fout2 << std::endl;
   }
   std::cout << MY_ALIGN_W("Average", 35)

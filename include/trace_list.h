@@ -91,6 +91,17 @@ class TraceList {
     enable_hotregion_ = enable_hotregion;
     hot_region_size = hr_size;
   }
+  TraceList(const char filename[], unsigned long long hr_size = 0,
+            bool enable_hotregion = false) {
+    std::ifstream in(filename);
+    unsigned long long pc;
+    pc2meta = std::unordered_map<unsigned long long, PCmeta>();
+    while (in >> std::hex >> pc) {
+      pc2meta[pc] = PCmeta();
+      pc2meta[pc].input(in);
+    }
+    TraceList(hr_size, enable_hotregion);
+  }
   void add_outfile(const char filename[]) {
     out.open(filename);
     assert(out);

@@ -22,3 +22,6 @@ new_bench/result.bak/
 new_bench/result/
 new_bench/result.x86_64/
 new_bench/total/
+new_bench/result-221009/
+new_bench/result_serial/
+new_bench/paint/
