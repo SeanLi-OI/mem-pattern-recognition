@@ -94,13 +94,13 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-#pragma omp parallel for
+// #pragma omp parallel for
   for (int i = 7; i < N; i++) {
     std::vector<int> choice;
     if (calc(hb_count, choice, i + 1, M, max_flow)) {
       double total_time =
           choice.size() * FLAGS_analyze_time + (i + 1) * FLAGS_capture_ckp_time;
-#pragma omp critical
+// #pragma omp critical
       {
         LOG(INFO) << "Result of " << i << ": " << choice.size();
         if (total_time < min_time) {
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   }
   bool isFirst = true;
   for (auto &id : final_choice) {
-    std::cout << (isFirst ? "" : ",") << id;
+    std::cout << (isFirst ? "" : ",") << id - 1;
     isFirst = false;
   }
   std::cout << std::endl;
