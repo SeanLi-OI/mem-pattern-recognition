@@ -2,14 +2,19 @@
 #include <glog/logging.h>
 #include <stdio.h>
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 
+#include "pattern.h"
 #include "utils/macro.h"
+
 DEFINE_string(result_dir, "", "");
 DEFINE_string(output, "parse.res", "");
+
 double get_percent(std::string &str, bool need = true) {
   int len = str.length();
   int st = 0;
@@ -22,6 +27,7 @@ double get_percent(std::string &str, bool need = true) {
   double val = std::stod(str.substr(st, ed - st));
   return val < 80 && need ? val + 20 : val;
 }
+
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   FLAGS_logtostderr = 1;
@@ -48,19 +54,39 @@ int main(int argc, char *argv[]) {
     }
     std::cout << MY_ALIGN_W(app, 35);
     std::string str;
+    std::array<double, PATTERN_NUM> detailed;
     while (std::getline(fin1, str)) {
-      if (str.substr(0, 5) == "Cover") {
+      std::stringstream ss(str);
+      std::string label;
+      ss >> label;
+      if (label == "Cover") {
         double coverage = get_percent(str);
         sum_c += coverage;
-        std::cout << MY_ALIGN_W(coverage, 6);
-      }
-      if (str.substr(0, 5) == "Hit  ") {
+        std::cout << std::fixed << std::setprecision(2)
+                  << MY_ALIGN_W(coverage, 10);
+      } else if (label == "Hit") {
+        ss >> label;
+        if (label != ":") continue;
         double accurancy = get_percent(str);
         sum_a += accurancy;
-        std::cout << MY_ALIGN_W(accurancy, 6) << std::endl;
+        std::cout << std::fixed << std::setprecision(2)
+                  << MY_ALIGN_W(accurancy, 10);
+      } else {
+        for (int i = 0; i < PATTERN_NUM; i++)
+          if (label == PATTERN_NAME[i]) {
+            long long hit, predict, total;
+            ss >> hit >> predict >> total;
+            detailed[i] = hit * 1.0 / predict;
+          }
       }
     }
-    if (sum_c != 0) num++;
+    if (sum_c != 0) {
+      num++;
+      for (int i = 0; i < PATTERN_NUM; i++)
+        std::cout << std::fixed << std::setprecision(4)
+                  << MY_ALIGN_W(detailed[i], 10);
+      std::cout << std::endl;
+    }
   }
   for (auto const &dir_entry : std::filesystem::directory_iterator{
            std::filesystem::path{FLAGS_result_dir}}) {
@@ -116,7 +142,7 @@ int main(int argc, char *argv[]) {
     for (auto &v : stats) fout2 << "," << v << "%";
     fout2 << std::endl;
   }
-  std::cout << MY_ALIGN_W("Average", 35)
+  std::cout << std::fixed << std::setprecision(2) << MY_ALIGN_W("Average", 35)
             << MY_ALIGN_W(RAW_PERCENT(sum_c / 100.0, num), 6)
             << MY_ALIGN_W(RAW_PERCENT(sum_a / 100.0, num), 6) << std::endl;
   return 0;
