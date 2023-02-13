@@ -31,6 +31,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   // if (trace_filter(ip, isWrite, tmp)) return;
+  if(ip>=0x40062f &&ip<=0x40063d){
   // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
   // if (ip == 0x401821 || ip == 0x401822 || ip == 0x401830 || ip == 0x40183e) {
   // if (ip >= 0x50a505 && ip <= 0x50a554) {
@@ -42,7 +43,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
           (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
           inst_id);
   // traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
-  // }
+  }
 }
 
 int main(int argc, char *argv[]) {

@@ -79,6 +79,9 @@ class TraceList {
   bool check_struct_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
+  bool check_random_pattern(
+      std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+      unsigned long long int &addr);
   void check_hot_region(unsigned long long int &region_id,
                         const unsigned long long &inst_id);
 

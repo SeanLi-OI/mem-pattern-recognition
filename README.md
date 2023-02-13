@@ -1,3 +1,33 @@
+# Code List
+``` bash
+mem-pattern-recognition
+├──include/
+│   ├── conf_counter.h // 置信计数器
+│   ├── instruction.h // trace格式定义
+│   ├── pattern.h // 访存模式定义
+│   ├── pattern_list.h // 验证器
+│   ├── pc_meta.h // 分析器中每个PC的元数据
+│   ├── trace_list.h // 分析器
+│   ├── tracereader.h // trace读取
+│   └── utils
+│       ├── macro.h // 通用的宏定义
+│       └── MCMF.h // 最小费用流算法
+└── src
+    ├── main.cpp
+    ├── pattern_list.cpp
+    ├── pc_meta.cpp
+    ├── trace_list.cpp
+    ├── tracereader.cpp
+    └── utils
+        ├── choose_ckp.cpp // 选择检查点算法
+        ├── macro.cpp 
+        ├── merge-result.cpp // 合并多个分析结果
+        ├── parse-merged-result.cpp // 解析合并后结果
+        └── pattern2line.cpp // PC元数据的统一输入输出接口
+```
+
+
+
 # Demo
 
 以五种访存模式生成器为基础

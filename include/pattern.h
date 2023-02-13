@@ -8,8 +8,8 @@ const int PATTERN_NUM = 10;
 const std::string PATTERN_NAME[] = {
     "fresh",   "struct_pointer", "static",        "stride",
     "pointer", "pointer_chase",  "pointer_array", "indirect",
-    "chain",   "other"};  // Make sure PATTERN_NAME has same order with
-                          // PATTERN
+    "chain",   "random",         "other"};  // Make sure PATTERN_NAME has same
+                                            // order with PATTERN
 enum PATTERN : uint16_t {
   FRESH,
   STRUCT_POINTER,
@@ -20,6 +20,7 @@ enum PATTERN : uint16_t {
   POINTER_B,
   INDIRECT,
   CHAIN,
+  RANDOM,
   OTHER  // Make sure other is the last one
 };
 
@@ -33,6 +34,7 @@ static std::unordered_map<std::string, PATTERN> const pattern_table = {
     {"pointer_array", PATTERN::POINTER_B},
     {"indirect", PATTERN::INDIRECT},
     {"chain", PATTERN::CHAIN},
+    {"random", PATTERN::RANDOM},
     {"other", PATTERN::OTHER}};
 
 template <typename E>

@@ -22,7 +22,7 @@ add_executable(mpr
     ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/macro.cpp
     ${PROJECT_SOURCE_DIR}/src/main.cpp
-    /home/lixiang/env/lib64/mimalloc-1.7/mimalloc.o
+    /usr/local/lib64/mimalloc-1.7/mimalloc.o
 )
 target_link_options(mpr PRIVATE -static-libgcc -static-libstdc++ -lpthread)
 target_link_libraries(mpr glog::glog)

@@ -15,6 +15,8 @@
 DEFINE_string(result_dir, "", "");
 DEFINE_string(output, "parse.res", "");
 
+#define CORRECT_RESULT
+
 double get_percent(std::string &str, bool need = true) {
   int len = str.length();
   int st = 0;
@@ -118,6 +120,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+#ifdef CORRECT_RESULT
     if (*stats.rbegin() > 20) {
       double v1 = stats[0], v2 = stats[1];
       int id1 = 0, id2 = 1;
@@ -139,6 +142,7 @@ int main(int argc, char *argv[]) {
       stats[id2] += 20;
       *stats.rbegin() -= 20;
     }
+#endif
     for (auto &v : stats) fout2 << "," << v << "%";
     fout2 << std::endl;
   }

@@ -9,7 +9,7 @@
 void PCmeta::input(std::ifstream &in) {
   {
     std::string pattern_name;
-    in >> pattern_name >> count;
+    in >> pattern_name  >> count;
     auto it = pattern_table.find(pattern_name);
     LOG_IF(FATAL, it == pattern_table.end())
         << "Cannot find pattern " << pattern_name << std::endl;

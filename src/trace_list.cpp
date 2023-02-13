@@ -323,6 +323,17 @@ bool TraceList::check_struct_pointer_pattern(
   return false;
 }
 
+#define RANDOM_THRESHOLD 64
+bool TraceList::check_random_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  if (abs_sub(it_meta->second.lastaddr, addr) >= RANDOM_THRESHOLD) {
+    it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] = true;
+    return true;
+  }
+  return false;
+}
+
 #define HOT_REGION_INST_THRESHOLD 32
 #define HOT_REGION_LEN_THRESHOLD \
   (hot_region_size / HOT_REGION_INST_THRESHOLD / 4)
@@ -362,6 +373,8 @@ void TraceList::add_trace(unsigned long long int pc,
                           unsigned long long int value, bool isWrite,
                           unsigned long long int &id,
                           const unsigned long long inst_id) {
+  pc <<= 1;
+  if (isWrite) pc |= 1;
   TraceNode tn(pc, addr, value, isWrite, id);
   auto it_val = value2trace.find(addr);
   {  // value2trace
@@ -404,7 +417,8 @@ void TraceList::add_trace(unsigned long long int pc,
           // it_meta->second.pattern_confidence[to_underlying(PATTERN::STRIDE)]++;
         }
         if (check_pointer_pattern(it_meta, it_val)) {
-          it_meta->second.pattern_confidence[to_underlying(PATTERN::pointer)].Positive();
+          it_meta->second.pattern_confidence[to_underlying(PATTERN::pointer)]
+              .Positive();
           // if (it_meta->second
           //         .pattern_confidence[to_underlying(PATTERN::pointer)] >=
           //     POINTER_THERSHOLD) {
@@ -431,6 +445,8 @@ void TraceList::add_trace(unsigned long long int pc,
           // break;
         }
         if (check_struct_pointer_pattern(it_meta, addr)) {
+        }
+        if (check_random_pattern(it_meta, addr)) {
         }
       }
     }
@@ -482,7 +498,8 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
         if (static_cast<PATTERN>(i) == PATTERN::pointer) {
           if (!meta.lastpc_candidate.empty()) {
             meta.lastpc = *meta.lastpc_candidate.begin();
-            if (pc2meta[meta.lastpc].pattern == PATTERN::STRIDE)
+            if (pc2meta[meta.lastpc]
+                    .maybe_pattern[to_underlying(PATTERN::STRIDE)])
               meta.pattern = PATTERN::POINTER_B;
             else
               meta.pattern = PATTERN::pointer;
@@ -509,6 +526,10 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
           }
         }
         if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
+      }
+      if (meta.pattern == PATTERN::OTHER) {
+        if (meta.maybe_pattern[to_underlying(PATTERN::RANDOM)])
+          meta.pattern = PATTERN::RANDOM;
       }
     }
   }
@@ -546,7 +567,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
   }
   if (out) {
     for (auto &[pc, meta] : pc2meta) {
-      out << std::hex << pc << " ";
+      out << std::hex << (pc >> 1) << " ";
       meta.output(out);
     }
     out.close();

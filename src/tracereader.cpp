@@ -159,7 +159,34 @@ class input_tracereader : public tracereader {
   }
 };
 
+class str_tracereader : public tracereader {
+  MyInstr last_instr;
+  bool initialized = false;
+  
+
+ public:
+  str_tracereader(uint8_t cpu, std::string _tn) : tracereader(cpu, _tn) {}
+
+  MyInstr get(bool &isend) {
+    MsRecord trace_read_instr;
+
+    MyInstr now;
+
+    if (!initialized) {
+      // last_instr = trace_read_instr;
+      initialized = true;
+    }
+
+    // MsRecord retval = last_instr;
+
+    // last_instr = trace_read_instr;
+    // return retval;
+    return trace_read_instr;
+  }
+};
+
 tracereader *get_tracereader(std::string fname, uint8_t cpu,
-                             bool is_cloudsuite) {
+                             bool is_stringtrace) {
+  if (is_stringtrace) return new str_tracereader(cpu, fname);
   return new input_tracereader(cpu, fname);
 }
