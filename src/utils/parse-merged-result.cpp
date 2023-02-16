@@ -15,7 +15,7 @@
 DEFINE_string(result_dir, "", "");
 DEFINE_string(output, "parse.res", "");
 
-#define CORRECT_RESULT
+// #define CORRECT_RESULT
 
 double get_percent(std::string &str, bool need = true) {
   int len = str.length();
