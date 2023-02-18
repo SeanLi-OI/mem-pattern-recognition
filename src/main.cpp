@@ -31,7 +31,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   unsigned long long tmp = 0;
   for (int i = r.len - 1; i >= 0; i--) tmp = tmp * 256 + r.content[i];
   // if (trace_filter(ip, isWrite, tmp)) return;
-  if(ip>=0x40062f &&ip<=0x40063d){
+  if(ip>=0x12c82 &&ip<=0x12c96){
   // if ((ip >= 0x401846 && ip <= 0x40184e) || ip == 0x418f05) {
   // if (ip == 0x401821 || ip == 0x401822 || ip == 0x401830 || ip == 0x40183e) {
   // if (ip >= 0x50a505 && ip <= 0x50a554) {
@@ -42,7 +42,7 @@ void debug_trace(TraceList &traceList, unsigned long long &id,
   fprintf(stderr, "%c %llx %llx %llx %d inst_id:%llu\n", isWrite ? 'W' : 'R',
           (unsigned long long)ip, (unsigned long long)r.addr, tmp, (int)r.len,
           inst_id);
-  // traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
+  traceList.add_trace(ip, r.addr, tmp, isWrite, ++id, inst_id);
   }
 }
 
@@ -102,6 +102,41 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "=====================MPR End====================="
               << std::endl;
   }
+  if (FLAGS_debug == true) {
+    LOG(INFO) << "=================Debug Start==================" << std::endl;
+    FLAGS_trace = std::filesystem::absolute(FLAGS_trace);
+    LOG(INFO) << "Reading trace from " << FLAGS_trace << std::endl;
+    //     LOG(INFO) << "Reading pattern to " << FLAGS_pattern << std::endl;
+    auto traces = get_tracereader(FLAGS_trace, 1, 0);
+    auto traceList = TraceList(FLAGS_hrsize, FLAGS_hotregion);
+    traceList.add_outfile(FLAGS_pattern.c_str());
+    unsigned long long id = 0;
+    int inst_id = 0;
+    bool isend = false;
+    while (true) {
+      auto inst = traces->get(isend);
+      if (isend) break;
+      inst_id++;
+#ifdef ENABLE_PC_DIFF
+      debug_trace(id, inst.ip << 2, inst.r0, 0, inst_id);
+      if (id == FLAGS_len) break;
+      debug_trace(id, (inst.ip << 2) | 1, inst.r1, 0, inst_id);
+      if (id == FLAGS_len) break;
+      debug_trace(id, (inst.ip << 2) | 2, inst.w0, 1, inst_id);
+      if (id == FLAGS_len) break;
+#else
+      debug_trace(traceList, id, inst.ip, inst.r0, 0, inst_id);
+      if (id == FLAGS_len) break;
+      debug_trace(traceList, id, inst.ip, inst.r1, 0, inst_id);
+      if (id == FLAGS_len) break;
+      debug_trace(traceList, id, inst.ip, inst.w0, 1, inst_id);
+      if (id == FLAGS_len) break;
+#endif
+      // if (inst.ip == 0x40318f) std::cerr << std::endl;
+    }
+    traceList.printStats(id, FLAGS_stat.c_str(), FLAGS_hotregionresult.c_str());
+    LOG(INFO) << "==================Debug End===================" << std::endl;
+  }
   if (FLAGS_validate == true) {
     LOG(INFO) << "=================Validate Start=================="
               << std::endl;
@@ -147,40 +182,6 @@ int main(int argc, char *argv[]) {
     patterns.printStats(id, FLAGS_result.c_str());
     LOG(INFO) << "==================Validate End==================="
               << std::endl;
-  }
-  if (FLAGS_debug == true) {
-    LOG(INFO) << "=================Debug Start==================" << std::endl;
-    FLAGS_trace = std::filesystem::absolute(FLAGS_trace);
-    LOG(INFO) << "Reading trace from " << FLAGS_trace << std::endl;
-    //     LOG(INFO) << "Reading pattern to " << FLAGS_pattern << std::endl;
-    auto traces = get_tracereader(FLAGS_trace, 1, 0);
-    auto traceList = TraceList(FLAGS_hrsize, FLAGS_hotregion);
-    unsigned long long id = 0;
-    int inst_id = 0;
-    bool isend = false;
-    while (true) {
-      auto inst = traces->get(isend);
-      if (isend) break;
-      inst_id++;
-#ifdef ENABLE_PC_DIFF
-      debug_trace(id, inst.ip << 2, inst.r0, 0, inst_id);
-      if (id == FLAGS_len) break;
-      debug_trace(id, (inst.ip << 2) | 1, inst.r1, 0, inst_id);
-      if (id == FLAGS_len) break;
-      debug_trace(id, (inst.ip << 2) | 2, inst.w0, 1, inst_id);
-      if (id == FLAGS_len) break;
-#else
-      debug_trace(traceList, id, inst.ip, inst.r0, 0, inst_id);
-      if (id == FLAGS_len) break;
-      debug_trace(traceList, id, inst.ip, inst.r1, 0, inst_id);
-      if (id == FLAGS_len) break;
-      debug_trace(traceList, id, inst.ip, inst.w0, 1, inst_id);
-      if (id == FLAGS_len) break;
-#endif
-      // if (inst.ip == 0x40318f) std::cerr << std::endl;
-    }
-    // traceList.printStats(id, FLAGS_stat.c_str(), FLAGS_hotregion.c_str());
-    LOG(INFO) << "==================Debug End===================" << std::endl;
   }
   return 0;
 }

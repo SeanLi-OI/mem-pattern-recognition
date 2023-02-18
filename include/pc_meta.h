@@ -5,8 +5,8 @@
 #include <set>
 #include <unordered_map>
 
-#include "pattern.h"
 #include "conf_counter.h"
+#include "pattern.h"
 
 class PCmeta {  // Metadata for each PC
  public:
@@ -31,8 +31,10 @@ class PCmeta {  // Metadata for each PC
     unsigned long long int pc;
     long long offset;
     int confidence;
+    bool flag;
     struct_pointer_meta() {}
     struct_pointer_meta(unsigned long long int _p) : pc(_p) {
+      flag = false;
       offset = 0;
       confidence = 0;
     }

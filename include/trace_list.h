@@ -34,6 +34,7 @@ class TraceList {
     TraceNode(unsigned long long int _p, unsigned long long int _a,
               unsigned long long int _v, bool _i, unsigned long long int _id)
         : pc(_p), addr(_a), value(_v), isWrite(_i), id(_id) {}
+    void __debug() { std::cerr << std::hex << (pc << 1) << std::endl; }
   };
 
   std::unordered_map<unsigned long long int, std::deque<TraceNode>> value2trace;

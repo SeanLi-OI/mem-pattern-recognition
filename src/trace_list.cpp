@@ -8,6 +8,8 @@
 
 #include "utils/macro.h"
 
+#define INTERVAL 64
+
 inline long long int abs_sub(unsigned long long int a,
                              unsigned long long int b) {
   return (long long)a - (long long)b;
@@ -26,7 +28,9 @@ void add_trace(TraceList &traceList, unsigned long long &id,
 void TraceList::erase_before(std::deque<TraceNode> &L,
                              const unsigned long long int &id) {
 #ifndef DEBUG_ALL
-  while (!L.empty() && L.front().id < id - INTERVAL) L.pop_front();
+  while (!L.empty() && id - L.front().id > INTERVAL) {
+    L.pop_front();
+  }
 #endif
 }
 void TraceList::add_next(std::deque<TraceNode> &L, TraceNode tn) {
@@ -269,9 +273,13 @@ bool TraceList::check_struct_pointer_pattern(
         it_meta->second.meeted_pc_sp.end()) {
       if (it != it_meta->second.struct_pointer_candidate.end()) {
         if (!flag) {
-          it->second.confidence /= 2;
-          if (it->second.confidence <= 2) {
-            tmp.erase(tmp.find(trace.pc));
+          if (it->second.flag) {
+            it->second.confidence /= 2;
+            if (it->second.confidence <= 2) {
+              tmp.erase(tmp.find(trace.pc));
+            }
+          } else {
+            it->second.flag = true;
           }
           flag = true;
         }
@@ -287,8 +295,12 @@ bool TraceList::check_struct_pointer_pattern(
         } else {
           if (offset_now == it->second.offset) {
             it->second.confidence++;
+            it->second.flag = false;
             tmp[trace.pc] = it->second;
           }
+          // if ((it_meta->first >> 1) == 0x12c86 && (trace.pc >> 1) == 0x12c82)
+          //   std::cerr << std::dec << offset_now << " " << it->second.confidence
+          //             << std::endl;
           if (it->second.confidence >= STRUCT_POINTER_THERSHOLD) {
             it_meta->second.last_pc_sp = trace.pc;
             it_meta->second.offset_sp = offset_now;
@@ -302,11 +314,18 @@ bool TraceList::check_struct_pointer_pattern(
       it_meta->second.meeted_pc_sp.insert(trace.pc);
     }
   }
+
   if (tmp.empty() &&
       it_meta->second.maybe_pattern[to_underlying(PATTERN::STRUCT_POINTER)] ==
           true)
     it_meta->second.is_not_pattern[to_underlying(PATTERN::STRUCT_POINTER)] =
         true;
+  if ((it_meta->first >> 1) == 0x12c86)
+    std::cerr
+        << it_meta->second.maybe_pattern[to_underlying(PATTERN::STRUCT_POINTER)]
+        << it_meta->second
+               .is_not_pattern[to_underlying(PATTERN::STRUCT_POINTER)]
+        << std::endl;
   // if (it_meta->first == 0x40183e) {
   //   for (auto &t : tmp) {
   //     LOG(INFO) << std::hex << t.first << std::endl;
