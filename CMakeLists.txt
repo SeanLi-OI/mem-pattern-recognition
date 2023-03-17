@@ -7,9 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDEFINED_IN_CMAKELISTS")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/external/gflags)
+# add_subdirectory(${PROJECT_SOURCE_DIR}/external/gflags)
 
+set(gflags_DIR ${PROJECT_SOURCE_DIR}/external/gflags/build)
 set(glog_DIR ${PROJECT_SOURCE_DIR}/external/glog/build)
+find_package(gflags 2.2.2 REQUIRED)
 find_package(glog 0.6.0 REQUIRED)
 find_package(OpenMP REQUIRED)
 
@@ -25,7 +27,7 @@ add_executable(mpr
 )
 target_link_options(mpr PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(mpr glog::glog)
-target_link_libraries(mpr gflags::gflags)
+target_link_libraries(mpr gflags)
 
 add_executable(pattern2line
     ${PROJECT_SOURCE_DIR}/src/utils/pattern2line.cpp
@@ -38,7 +40,7 @@ add_executable(perf-parse
     ${PROJECT_SOURCE_DIR}/src/utils/perf-parse.cpp
 )
 target_link_options(perf-parse PRIVATE -static-libgcc -static-libstdc++)
-target_link_libraries(perf-parse gflags::gflags)
+target_link_libraries(perf-parse gflags)
 target_link_libraries(perf-parse glog::glog)
 
 add_executable(analyze-other
@@ -59,7 +61,7 @@ add_executable(analyze-gem5-missinfo
 )
 target_link_options(analyze-gem5-missinfo PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(analyze-gem5-missinfo glog::glog)
-target_link_libraries(analyze-gem5-missinfo gflags::gflags)
+target_link_libraries(analyze-gem5-missinfo gflags)
 
 add_executable(merge-result
     ${PROJECT_SOURCE_DIR}/src/utils/merge-result.cpp
@@ -71,7 +73,7 @@ add_executable(merge-result
 )
 target_link_options(merge-result PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(merge-result glog::glog)
-target_link_libraries(merge-result gflags::gflags)
+target_link_libraries(merge-result gflags)
 target_link_libraries(merge-result OpenMP::OpenMP_CXX)
 
 add_executable(parse-merged-result
@@ -81,4 +83,4 @@ add_executable(parse-merged-result
 
 target_link_options(parse-merged-result PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(parse-merged-result glog::glog)
-target_link_libraries(parse-merged-result gflags::gflags)
+target_link_libraries(parse-merged-result gflags)
