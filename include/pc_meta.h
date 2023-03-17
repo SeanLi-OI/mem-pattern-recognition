@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "pattern.h"
+#include "utils/LRUqueue.h"
 
 class PCmeta {  // Metadata for each PC
  public:
@@ -61,6 +62,10 @@ class PCmeta {  // Metadata for each PC
   long long stride_tmp;
   short stride_flag;
 
+  // RANDOM
+  LRUqueue<long long int, RANDOM_LEN> offset_history;
+  long long random_tmp;
+
   // common
   PATTERN pattern;
   unsigned long long int count;
@@ -83,6 +88,7 @@ class PCmeta {  // Metadata for each PC
     static_tmp = 0;
     pointerA_offset_candidate = -1;
     maybe_pointer_chase = 0;
+    random_tmp = 0;
     pattern = PATTERN::OTHER;
     stride_flag = false;
     for (int i = 0; i < PATTERN_NUM; i++) {

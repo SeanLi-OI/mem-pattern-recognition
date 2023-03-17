@@ -326,6 +326,26 @@ bool TraceList::check_struct_pointer_pattern(
   return false;
 }
 
+bool check_random_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  long long int offset = abs_sub(it_meta->second.lastaddr, addr);
+  if (offset >= RANDOM_T && !it_meta->second.offset_history.push(offset)) {
+    it_meta->second.random_tmp++;
+    if (it_meta->second.random_tmp > RANDOM_THERSHOLD) {
+      it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] = true;
+    }
+    return true;
+  } else {
+    if (it_meta->second.random_tmp > 0)
+      it_meta->second.random_tmp--;
+    else if (it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] ==
+             true)
+      it_meta->second.is_not_pattern[to_underlying(PATTERN::RANDOM)] = true;
+    return false;
+  }
+}
+
 #define HOT_REGION_INST_THRESHOLD 32
 #define HOT_REGION_LEN_THRESHOLD \
   (hot_region_size / HOT_REGION_INST_THRESHOLD / 4)
@@ -479,8 +499,8 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
       int champ_confidence = 16;
       for (int i = 0; i < PATTERN_NUM - 1; i++) {
         if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
-            static_cast<PATTERN>(i) == PATTERN::CHAIN ||
-            static_cast<PATTERN>(i) == PATTERN::POINTER_B)
+            static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
+            static_cast<PATTERN>(i) == PATTERN::RANDOM)
           continue;
         if (static_cast<PATTERN>(i) == PATTERN::pointer) {
           if (!meta.lastpc_candidate.empty()) {
@@ -500,18 +520,22 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
       if (meta.pattern == PATTERN::OTHER) {
         for (int i = 0; i < PATTERN_NUM - 1; i++) {
           if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
-              static_cast<PATTERN>(i) == PATTERN::CHAIN ||
               static_cast<PATTERN>(i) == PATTERN::INDIRECT ||
               static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
               static_cast<PATTERN>(i) == PATTERN::pointer ||
-              static_cast<PATTERN>(i) == PATTERN::POINTER_A)
+              static_cast<PATTERN>(i) == PATTERN::POINTER_A ||
+              static_cast<PATTERN>(i) == PATTERN::RANDOM)
             continue;
           if (meta.pattern_confidence[i] > champ_confidence) {
             meta.pattern = static_cast<PATTERN>(i);
             champ_confidence = meta.pattern_confidence[i];
           }
         }
-        if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
+        if (meta.pattern == PATTERN::OTHER) {
+          if (meta.pattern_confidence[PATTERN::RANDOM] > RANDOM_THERSHOLD)
+            meta.pattern = PATTERN::RANDOM;
+          if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
+        }
       }
     }
   }

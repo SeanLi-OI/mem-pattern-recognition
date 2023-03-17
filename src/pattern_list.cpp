@@ -175,7 +175,7 @@ void PatternList::printStats(unsigned long long totalCnt,
   out << "=================================================" << std::endl;
   out << "                Hit         Predict     Total" << std::endl;
   for (int i = 0; i < PATTERN_NUM; i++) {
-    if (static_cast<PATTERN>(i) == PATTERN::CHAIN) continue;
+    // if (static_cast<PATTERN>(i) == PATTERN::CHAIN) continue;
     if (hit_count[i] * 2 < total_count[i])
       hit_count[i] = total_count[i] - hit_count[i];
     out << MY_ALIGN_STR(PATTERN_NAME[i]) << MY_ALIGN(hit_count[i])

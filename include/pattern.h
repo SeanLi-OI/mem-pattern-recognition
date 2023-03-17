@@ -7,7 +7,7 @@ const int PATTERN_NUM = 10;
 const std::string PATTERN_NAME[] = {
     "fresh",   "struct_pointer", "static",        "stride",
     "pointer", "pointer_chase",  "pointer_array", "indirect",
-    "chain",   "other"};  // Make sure PATTERN_NAME has same order with
+    "random",   "other"};  // Make sure PATTERN_NAME has same order with
                           // PATTERN
 enum PATTERN : uint16_t {
   FRESH,
@@ -18,7 +18,7 @@ enum PATTERN : uint16_t {
   POINTER_A,
   POINTER_B,
   INDIRECT,
-  CHAIN,
+  RANDOM,
   OTHER  // Make sure other is the last one
 };
 
@@ -31,7 +31,7 @@ static std::unordered_map<std::string, PATTERN> const pattern_table = {
     {"pointer_chase", PATTERN::POINTER_A},
     {"pointer_array", PATTERN::POINTER_B},
     {"indirect", PATTERN::INDIRECT},
-    {"chain", PATTERN::CHAIN},
+    {"random", PATTERN::RANDOM},
     {"other", PATTERN::OTHER}};
 
 template <typename E>
@@ -45,8 +45,10 @@ const uint16_t POINTER_A_THERSHOLD = 512;
 const uint16_t INDIRECT_THERSHOLD = 512;
 const uint16_t PATTERN_THERSHOLD = 512;
 const uint16_t POINTER_THERSHOLD = 512;
-const uint16_t CHAIN_THERSHOLD = 512;
 const uint16_t STATIC_THERSHOLD = 512;
 const uint16_t STRUCT_POINTER_THERSHOLD = 512;
+const uint16_t RANDOM_THERSHOLD = 512;
+const uint16_t RANDOM_LEN = 64;
+const uint32_t RANDOM_T = 256;
 
 #endif
