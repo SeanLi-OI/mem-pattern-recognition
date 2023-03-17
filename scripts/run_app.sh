@@ -7,10 +7,10 @@ champsim_dir=${PWD}/external/ChampSim
 bench_dir=${mpr_dir}/test-cases
 trace_dir=${mpr_dir}/trace
 result_dir=${mpr_dir}/result
-RUN_UNION_TRACE=false
+RUN_UNION_TRACE=true
 RUN_MPR=true
 RUN_CHAMPSIM=true
-RUN_VALIDATE=true
+RUN_VALIDATE=false
 RUN_PARSER=true
 
 
@@ -49,15 +49,15 @@ pattern_file=${result_dir}/${app}/${app}.pattern
 hotregion_file=${result_dir}/${app}/${app}.hotregion
 if [ "$RUN_MPR" = true ] ; then
     mkdir -p ${result_dir}/${app}
-    echo ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregion=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
-    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregion=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
+    echo ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregionresult=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
+    ${mpr_dir}/build/mpr --analyze -trace=${mpr_trace_file} -stat=${stat_file} -pattern=${pattern_file} -hotregionresult=${hotregion_file} 2>${result_dir}/${app}/mpr_err.txt &
 fi
 
 # Get miss from Champsim
 miss_file=${result_dir}/${app}/${app}.miss
 if [ "$RUN_CHAMPSIM" = true ] ; then
     mkdir -p ${result_dir}/${app}
-    ${champsim_dir}/bin/champsim --warmup_instructions 0 --simulation_instructions ${trace_len} ${champsim_trace_file}.gz 2>${miss_file} &
+    ${champsim_dir}/bin/champsim --warmup_instructions 0 --simulation_instructions ${trace_len} ${champsim_trace_file}.gz 1>/dev/null 2>${miss_file} &
 fi
 wait
 echo "Analyze $app done."
@@ -70,6 +70,7 @@ fi
 
 if [ "$RUN_PARSER" = true ] ; then
     out_file=${result_dir}/${app}/${app}.csv
+    echo ${mpr_dir}/build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt 
     ${mpr_dir}/build/pattern2line ${miss_file} ${pattern_file} ${out_file} ${binary_file} 2>${result_dir}/${app}/parse_err.txt &
 fi
 

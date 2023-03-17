@@ -5,6 +5,7 @@
 #include <set>
 #include <unordered_map>
 
+#include "conf_counter.h"
 #include "pattern.h"
 #include "utils/LRUqueue.h"
 
@@ -15,12 +16,11 @@ class PCmeta {  // Metadata for each PC
     unsigned long long int value;
     unsigned long long int addr;
     long long offset;
-    int confidence;
+    ConfCounter confidence;
     pc_value_meta() {}
     pc_value_meta(unsigned long long int _v, unsigned long long int _a)
         : value(_v), addr(_a) {
       offset = 0;
-      confidence = 0;
     }
   };
   std::unordered_map<unsigned long long int, pc_value_meta> pc_value_candidate;
@@ -32,8 +32,10 @@ class PCmeta {  // Metadata for each PC
     unsigned long long int pc;
     long long offset;
     int confidence;
+    bool flag;
     struct_pointer_meta() {}
     struct_pointer_meta(unsigned long long int _p) : pc(_p) {
+      flag = false;
       offset = 0;
       confidence = 0;
     }
@@ -51,15 +53,15 @@ class PCmeta {  // Metadata for each PC
   // pointerA
   long long int pointerA_offset_candidate;
   unsigned long long int lastvalue;
-  long long pointerA_tmp;
+  ConfCounter pointerA_tmp;
 
   // STATIC & STRIDE
   unsigned long long int lastaddr, lastaddr_2;
-  long long static_tmp;
+  ConfCounter static_tmp;
 
   // STRIDE
   long long int offset_stride;
-  long long stride_tmp;
+  ConfCounter stride_tmp;
   short stride_flag;
 
   // RANDOM
@@ -70,7 +72,7 @@ class PCmeta {  // Metadata for each PC
   PATTERN pattern;
   unsigned long long int count;
   bool confirm;
-  long long pattern_confidence[PATTERN_NUM];
+  ConfCounter pattern_confidence[PATTERN_NUM];
   bool is_not_pattern[PATTERN_NUM];
   bool maybe_pattern[PATTERN_NUM];
   bool maybe_pointer_chase;
@@ -83,16 +85,12 @@ class PCmeta {  // Metadata for each PC
     lastpc = 0;
     confirm = 0;
     offset_stride = 0;
-    stride_tmp = 0;
-    pointerA_tmp = 8;
-    static_tmp = 0;
     pointerA_offset_candidate = -1;
     maybe_pointer_chase = 0;
     random_tmp = 0;
     pattern = PATTERN::OTHER;
     stride_flag = false;
     for (int i = 0; i < PATTERN_NUM; i++) {
-      pattern_confidence[i] = 8;
       maybe_pattern[i] = false;
       is_not_pattern[i] = false;
     }

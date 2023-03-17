@@ -1,17 +1,14 @@
 #include <stdlib.h>
-struct tree {
-  int val;
-  struct tree* next;
-};
 int main() {
   int N = 10000, i;
-  struct tree* root[N];
+  int* val[N];
   int now;
   for (i = 0; i < N; i++) {
-    root[i] = (struct tree*)malloc(sizeof(struct tree));
+    val[i] = (int*)malloc(sizeof(int));
+    (*val[i]) = rand() % N;
   }
   for (i = 0; i < N; i++) {
-    now = root[i]->val;  // pointerB
+    now = *val[i];  // pointerB
   }
   return 0;
 }

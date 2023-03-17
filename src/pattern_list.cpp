@@ -125,6 +125,8 @@ void PatternList::add_trace(unsigned long long int pc,
             it_meta->second.stride_flag++;
             hit_count[pattern_now]++;
           }
+        }else{
+            hit_count[pattern_now]++;
         }
       }
 #ifdef ENABLE_MISS_COUNT

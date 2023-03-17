@@ -2,6 +2,7 @@
 #define PATTERN_H
 
 #include <string>
+#include <unordered_map>
 
 const int PATTERN_NUM = 10;
 const std::string PATTERN_NAME[] = {

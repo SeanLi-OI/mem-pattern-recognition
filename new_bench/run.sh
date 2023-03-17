@@ -1,7 +1,7 @@
 #!/bin/bash
-trace_dir=/data/lixiang/riscv-recovery/
+trace_dir=/data/songyifei/trace/riscv-recovery/
 mpr_dir=/data/lixiang/mem-pattern-recognition/
-result_dir=${mpr_dir}/new_bench/result/
+result_dir=${mpr_dir}/new_bench/result-221009/
 
 lock_file=/home/lixiang/.my_lock_file
 max_concurrent=20
@@ -9,6 +9,7 @@ max_concurrent=20
 apps=()
 
 get_apps_manually() {
+    apps+=("bh")
     # apps+=("blender_r_base.prefetch-m64")
     # apps+=("bwaves_r_base.prefetch-m64")
     # apps+=("cactusBSSN_r_base.prefetch-m64")
@@ -17,16 +18,16 @@ get_apps_manually() {
     # apps+=("cpuxalan_r_base.prefetch-m64")
     # apps+=("deepsjeng_r_base.prefetch-m64")
     # apps+=("exchange2_r_base.prefetch-m64")
-    apps+=("fotonik3d_r_base.prefetch-m64")
+    # apps+=("fotonik3d_r_base.prefetch-m64")
     # apps+=("lbm_r_base.prefetch-m64")
-    apps+=("ldecod_r_base.prefetch-m64")
+    # apps+=("ldecod_r_base.prefetch-m64")
     # apps+=("leela_r_base.prefetch-m64")
-    apps+=("mcf_r_base.prefetch-m64")
-    apps+=("nab_r_base.prefetch-m64")
+    # apps+=("mcf_r_base.prefetch-m64")
+    # apps+=("nab_r_base.prefetch-m64")
     # apps+=("namd_r_base.prefetch-m64")
     # apps+=("perlbench_r_base.prefetch-m64")
     # apps+=("povray_r_base.prefetch-m64")
-    apps+=("roms_r_base.prefetch-m64")
+    # apps+=("roms_r_base.prefetch-m64")
     # apps+=("xz_r_base.prefetch-m64")
 }
 
@@ -92,7 +93,7 @@ do_analyze() {
             if [ ! -f ${trace_path} ]; then
                 echo "Cannot find trace ${trace_path} for job $2 $1"
                 release_lock ${lock_id}
-                return
+                return 1
             fi
         fi
         ${mpr_dir}/build/mpr \
@@ -107,6 +108,7 @@ do_analyze() {
         echo "Finish job $2 $1 with code $?"
     fi
     release_lock ${lock_id}
+    return 0
 }
 
 do_merge() {
@@ -116,47 +118,47 @@ do_merge() {
         ${mpr_dir}/build/merge-result \
             --analyze_result \
             --validate_result \
-            -input_dir=${mpr_dir}/new_bench/result/$1 \
+            -input_dir=${result_dir}/$1 \
             -trace_dir=${trace_dir}/$1 \
-            -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern \
-            -stat=${mpr_dir}/new_bench/result/$1/mpr.stat \
-            -result=${mpr_dir}/new_bench/result/$1/mpr.res \
-            >${mpr_dir}/new_bench/result/$1/mpr.stdout \
-            2>${mpr_dir}/new_bench/result/$1/mpr.stderr
+            -pattern=${result_dir}/$1/mpr.pattern \
+            -stat=${result_dir}/$1/mpr.stat \
+            -result=${result_dir}/$1/mpr.res \
+            >${result_dir}/$1/mpr.stdout \
+            2>${result_dir}/$1/mpr.stderr
 
-        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${mpr_dir}/new_bench/result/$1 -trace_dir=${trace_dir}/$1 -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern -stat=${mpr_dir}/new_bench/result/$1/mpr.stat -result=${mpr_dir}/new_bench/result/$1/mpr.res " exit with code" $?
+        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
     else
         ${mpr_dir}/build/merge-result \
             --analyze_result \
             --validate_result \
-            -input_dir=${mpr_dir}/new_bench/result/$1 \
+            -input_dir=${result_dir}/$1 \
             -trace_dir=${trace_dir}/$1 \
             -len=$len \
-            -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern \
-            -stat=${mpr_dir}/new_bench/result/$1/mpr.stat \
-            -result=${mpr_dir}/new_bench/result/$1/mpr.res \
-            >${mpr_dir}/new_bench/result/$1/mpr.stdout \
-            2>${mpr_dir}/new_bench/result/$1/mpr.stderr
+            -pattern=${result_dir}/$1/mpr.pattern \
+            -stat=${result_dir}/$1/mpr.stat \
+            -result=${result_dir}/$1/mpr.res \
+            >${result_dir}/$1/mpr.stdout \
+            2>${result_dir}/$1/mpr.stderr
 
-        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${mpr_dir}/new_bench/result/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern -stat=${mpr_dir}/new_bench/result/$1/mpr.stat -result=${mpr_dir}/new_bench/result/$1/mpr.res " exit with code" $?
+        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
     fi
     release_lock ${lock_id}
 }
 do_merge_only_validate() {
     if [ ! -f ${result_dir}/${app}/$1/mpr.res ]; then
-        echo ${mpr_dir}/build/merge-result --validate_result -input_dir=${mpr_dir}/new_bench/result/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern -stat=${mpr_dir}/new_bench/result/$1/mpr.stat -result=${mpr_dir}/new_bench/result/$1/mpr.res --enable_roi -roi=${mpr_dir}/perf-test/${app}/roi.txt
+        echo ${mpr_dir}/build/merge-result --validate_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res --enable_roi -roi=${mpr_dir}/perf-test/${app}/roi.txt
         ${mpr_dir}/build/merge-result \
             --validate_result \
-            -input_dir=${mpr_dir}/new_bench/result/$1 \
+            -input_dir=${result_dir}/$1 \
             -trace_dir=${trace_dir}/$1 \
             -len=$len \
-            -pattern=${mpr_dir}/new_bench/result/$1/mpr.pattern \
-            -stat=${mpr_dir}/new_bench/result/$1/mpr.stat \
-            -result=${mpr_dir}/new_bench/result/$1/mpr.res \
+            -pattern=${result_dir}/$1/mpr.pattern \
+            -stat=${result_dir}/$1/mpr.stat \
+            -result=${result_dir}/$1/mpr.res \
             --enable_roi \
             -roi=${mpr_dir}/perf-test/${app}/roi.txt \
-            >${mpr_dir}/new_bench/result/$1/mpr.stdout \
-            2>${mpr_dir}/new_bench/result/$1/mpr.stderr
+            >${result_dir}/$1/mpr.stdout \
+            2>${result_dir}/$1/mpr.stderr
     fi
 }
 
@@ -165,11 +167,10 @@ job_v1() {
     init_lock
     for app in "${apps[@]}"; do
         if [ ! -d ${trace_dir}/${app}/all ]; then
-            echo ${app}
-            # for id in $(seq 1 $len); do
-            #     do_analyze $id $app &
-            #     sleep 1
-            # done
+            for id in $(seq 1 $len); do
+                do_analyze $id $app &
+                sleep 1
+            done
         else
             rm -rf ${result_dir}/${app}
             do_analyze "all" $app &
@@ -182,42 +183,78 @@ job_v1() {
 job_v2() {
     for app in "${apps[@]}"; do
         if [ ! -d ${trace_dir}/${app}/all ]; then
-            # do_merge $app 1
-            echo "skip ${app}"
+            do_merge $app 1
         else
             do_merge $app 0
         fi
     done
+}
+
+job_v3() {
+
+    ${mpr_dir}/build/parse-merged-result \
+        --result_dir=${result_dir}/ \
+        --output=${result_dir}/parse.res \
+        1>${result_dir}/parse.stat \
+        2>${result_dir}/parse.err
+}
+
+job_v4() {
+
+    for id in $(seq 1 $len); do
+        do_analyze $id $app_v4
+        if [ ! -f ${result_dir}/${app_v4}/${id}/mpr.res ]; then
+            break
+        else
+            rm -rf ${result_dir}/${app_v4}/all
+            cp -r ${result_dir}/${app_v4}/${id} ${result_dir}/${app_v4}/all
+        fi
+    done
+}
+
+job_v4_all() {
+    local app
+    app=$1
+    if [ ! -d ${trace_dir}/${app}/all ]; then
+        # for id in $(seq 1 $len); do
+        #     do_analyze $id $app &
+        #     sleep 1
+        # done
+        # wait
+        # do_merge $app 1
+        app_v4=$app
+        job_v4
+        do_merge $app 0
+    else
+        do_analyze "all" $app
+        do_merge $app 0
+    fi
+    # do_merge_only_validate $app
 }
 
 job_all() {
     local id
     init_lock
     for app in "${apps[@]}"; do
-        if [ ! -d ${trace_dir}/${app}/all ]; then
-            for id in $(seq 1 $len); do
-                do_analyze $id $app &
-                sleep 5
-            done
-            wait
-            do_merge $app 0
-        else
-            do_analyze "all" $app
-            do_merge $app 1
-        fi
-        # do_merge_only_validate $app
+        job_v4_all $app &
     done
-    ${mpr_dir}/build/parse-merged-result \
-        --result_dir=${mpr_dir}/new_bench/result/ \
-        --output=${mpr_dir}/new_bench/parse.res \
-        1>${mpr_dir}/new_bench/parse.stat \
-        2>${mpr_dir}/new_bench/parse.err
+    # ${mpr_dir}/build/parse-merged-result \
+    #     --result_dir=${result_dir}/ \
+    #     --output=${mpr_dir}/new_bench/parse.res \
+    #     1>${mpr_dir}/new_bench/parse.stat \
+    #     2>${mpr_dir}/new_bench/parse.err
 }
+
+if [ ! -z "$1" ]; then
+    result_dir=${mpr_dir}/new_bench/$1/
+fi
 
 # get_apps_manually
 # get_apps_from_dir
 get_all_apps_from_dir
 
-job_v1 >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
+mkdir -p ${result_dir}
+# job_v1 >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
 # job_v2 >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
 # job_all >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
+job_v3

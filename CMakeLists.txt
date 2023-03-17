@@ -24,8 +24,9 @@ add_executable(mpr
     ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/macro.cpp
     ${PROJECT_SOURCE_DIR}/src/main.cpp
+    /usr/local/lib64/mimalloc-1.7/mimalloc.o
 )
-target_link_options(mpr PRIVATE -static-libgcc -static-libstdc++)
+target_link_options(mpr PRIVATE -static-libgcc -static-libstdc++ -lpthread)
 target_link_libraries(mpr glog::glog)
 target_link_libraries(mpr gflags)
 
@@ -84,3 +85,12 @@ add_executable(parse-merged-result
 target_link_options(parse-merged-result PRIVATE -static-libgcc -static-libstdc++)
 target_link_libraries(parse-merged-result glog::glog)
 target_link_libraries(parse-merged-result gflags)
+
+add_executable(choose_ckp
+    ${PROJECT_SOURCE_DIR}/src/utils/choose_ckp.cpp
+)
+
+target_link_options(choose_ckp PRIVATE -static-libgcc -static-libstdc++)
+target_link_libraries(choose_ckp glog::glog)
+target_link_libraries(choose_ckp gflags)
+target_link_libraries(choose_ckp OpenMP::OpenMP_CXX)
