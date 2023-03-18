@@ -299,7 +299,8 @@ bool TraceList::check_struct_pointer_pattern(
             tmp[trace.pc] = it->second;
           }
           // if ((it_meta->first >> 1) == 0x12c86 && (trace.pc >> 1) == 0x12c82)
-          //   std::cerr << std::dec << offset_now << " " << it->second.confidence
+          //   std::cerr << std::dec << offset_now << " " <<
+          //   it->second.confidence
           //             << std::endl;
           if (it->second.confidence >= STRUCT_POINTER_THERSHOLD) {
             it_meta->second.last_pc_sp = trace.pc;
@@ -342,19 +343,50 @@ bool TraceList::check_struct_pointer_pattern(
   return false;
 }
 
-bool check_random_pattern(
+bool TraceList::check_locality_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  long long int offset = abs_sub(it_meta->second.lastaddr, addr);
+  it_meta->second.monoQueue.push(addr);
+  auto minmax = it_meta->second.monoQueue.get();
+  if (!it_meta->second.offset_history.check(offset) &&
+      minmax.second - minmax.first <= LOCALITY_T) {
+    it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
+        .Positive();
+    if (it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
+            .get() > LOCALITY_THRESHOLD) {
+      it_meta->second.maybe_pattern[to_underlying(PATTERN::LOCALITY)] = true;
+    }
+    return true;
+  } else {
+    if (it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
+            .get() > 0)
+      it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
+          .Negative();
+    else if (it_meta->second.maybe_pattern[to_underlying(PATTERN::LOCALITY)] ==
+             true)
+      it_meta->second.is_not_pattern[to_underlying(PATTERN::LOCALITY)] = true;
+    return false;
+  }
+}
+
+bool TraceList::check_random_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   long long int offset = abs_sub(it_meta->second.lastaddr, addr);
   if (offset >= RANDOM_T && !it_meta->second.offset_history.push(offset)) {
-    it_meta->second.random_tmp++;
-    if (it_meta->second.random_tmp > RANDOM_THERSHOLD) {
+    it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
+        .Positive();
+    if (it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
+            .get() > RANDOM_THERSHOLD) {
       it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] = true;
     }
     return true;
   } else {
-    if (it_meta->second.random_tmp > 0)
-      it_meta->second.random_tmp--;
+    if (it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
+            .get() > 0)
+      it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
+          .Negative();
     else if (it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] ==
              true)
       it_meta->second.is_not_pattern[to_underlying(PATTERN::RANDOM)] = true;
@@ -474,6 +506,8 @@ void TraceList::add_trace(unsigned long long int pc,
         }
         if (check_struct_pointer_pattern(it_meta, addr)) {
         }
+        if (check_locality_pattern(it_meta, addr)) {
+        }
         if (check_random_pattern(it_meta, addr)) {
         }
       }
@@ -546,6 +580,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
               static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
               static_cast<PATTERN>(i) == PATTERN::pointer ||
               static_cast<PATTERN>(i) == PATTERN::POINTER_A ||
+              static_cast<PATTERN>(i) == PATTERN::LOCALITY ||
               static_cast<PATTERN>(i) == PATTERN::RANDOM)
             continue;
           if (meta.pattern_confidence[i].get() > champ_confidence) {
@@ -554,7 +589,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
           }
         }
         if (meta.pattern == PATTERN::OTHER) {
-          if (meta.pattern_confidence[PATTERN::RANDOM] > RANDOM_THERSHOLD)
+          if (meta.pattern_confidence[PATTERN::RANDOM].get() > RANDOM_THERSHOLD)
             meta.pattern = PATTERN::RANDOM;
           if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
         }

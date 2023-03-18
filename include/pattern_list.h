@@ -1,3 +1,5 @@
+//Author: Lixiang
+
 #ifndef PATTERN_LIST_H
 #define PATTERN_LIST_H
 

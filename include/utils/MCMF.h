@@ -1,4 +1,5 @@
 // Author: Lixiang
+
 #ifndef MCMF_H
 #define MCMF_H
 #include <glog/logging.h>
