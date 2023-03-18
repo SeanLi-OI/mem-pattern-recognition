@@ -32,6 +32,7 @@ class LRUqueue {
 
  public:
   LRUqueue() : head(nullptr), tail(nullptr) {}
+  bool check(T key) { return p.find(key) != p.end(); }
   bool push(T key) {  // true if key exists
     auto it = p.find(key);
     if (it != p.end()) {

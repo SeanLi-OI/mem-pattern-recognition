@@ -8,6 +8,7 @@
 #include "conf_counter.h"
 #include "pattern.h"
 #include "utils/LRUqueue.h"
+#include "utils/monoQueue.h"
 
 class PCmeta {  // Metadata for each PC
  public:
@@ -64,9 +65,11 @@ class PCmeta {  // Metadata for each PC
   ConfCounter stride_tmp;
   short stride_flag;
 
+  // LOCALITY
+  MonoQueue<long long int, LOCALITY_LEN> monoQueue;
+
   // RANDOM
   LRUqueue<long long int, RANDOM_LEN> offset_history;
-  long long random_tmp;
 
   // common
   PATTERN pattern;
@@ -87,7 +90,6 @@ class PCmeta {  // Metadata for each PC
     offset_stride = 0;
     pointerA_offset_candidate = -1;
     maybe_pointer_chase = 0;
-    random_tmp = 0;
     pattern = PATTERN::OTHER;
     stride_flag = false;
     for (int i = 0; i < PATTERN_NUM; i++) {

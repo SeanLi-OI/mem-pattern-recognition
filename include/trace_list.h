@@ -80,6 +80,9 @@ class TraceList {
   bool check_struct_pointer_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
+  bool check_locality_pattern(
+      std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+      unsigned long long int &addr);
   bool check_random_pattern(
       std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
       unsigned long long int &addr);
