@@ -15,7 +15,7 @@ const std::string PATTERN_NAME[] = {"fresh",
                                     "pointer_chase",
                                     "pointer_array",
                                     "indirect",
-                                    "locality"
+                                    "locality",
                                     "random",
                                     "other"};  // Make sure PATTERN_NAME has
                                                // same order with PATTERN

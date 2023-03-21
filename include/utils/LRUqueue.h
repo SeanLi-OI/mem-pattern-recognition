@@ -1,4 +1,4 @@
-//Author: Lixiang
+// Author: Lixiang
 
 #ifndef LRU_QUEUE_H
 #define LRU_QUEUE_H
@@ -52,6 +52,7 @@ class LRUqueue {
       setHead(tmp);
       p[key] = tmp;
     }
+    return false;
   }
 };
 #endif

@@ -1,8 +1,8 @@
-#ifndef MONO_QUEUE_H
-//Author: Lixiang
+// Author: Lixiang
 
 #ifndef MONO_QUEUE_H
 #define MONO_QUEUE_H
+
 #include <cstddef>
 #include <deque>
 #include <map>
@@ -28,8 +28,9 @@ class MonoQueue {
     Q.push_back(id++);
     if (id == N) id = 0;
   }
-  std::pair<T, T> get() {  // Get <Min,Max> of Q
-    return std::make_pair(Q.back(), Q.front());
+  T get() {  // Get Max-Min of Q
+    if (Q.empty()) return 0;
+    return Q.front() - Q.back();
   }
 };
 #endif

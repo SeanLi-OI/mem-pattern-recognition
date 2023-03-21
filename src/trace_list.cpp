@@ -348,9 +348,8 @@ bool TraceList::check_locality_pattern(
     unsigned long long int &addr) {
   long long int offset = abs_sub(it_meta->second.lastaddr, addr);
   it_meta->second.monoQueue.push(addr);
-  auto minmax = it_meta->second.monoQueue.get();
   if (!it_meta->second.offset_history.check(offset) &&
-      minmax.second - minmax.first <= LOCALITY_T) {
+      it_meta->second.monoQueue.get() <= LOCALITY_T) {
     it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
         .Positive();
     if (it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
