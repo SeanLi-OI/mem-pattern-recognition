@@ -554,6 +554,7 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
       for (int i = 0; i < PATTERN_NUM - 1; i++) {
         if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
             static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
+            static_cast<PATTERN>(i) == PATTERN::LOCALITY ||
             static_cast<PATTERN>(i) == PATTERN::RANDOM)
           continue;
         if (static_cast<PATTERN>(i) == PATTERN::pointer) {
@@ -594,7 +595,9 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
         }
       }
       if (meta.pattern == PATTERN::OTHER) {
-        if (meta.maybe_pattern[to_underlying(PATTERN::RANDOM)])
+        if (meta.maybe_pattern[to_underlying(PATTERN::LOCALITY)])
+          meta.pattern = PATTERN::LOCALITY;
+        else if (meta.maybe_pattern[to_underlying(PATTERN::RANDOM)])
           meta.pattern = PATTERN::RANDOM;
       }
     }
