@@ -25,6 +25,11 @@ class ConfCounter {
     counter >>= 1;
     return false;
   }
+  bool Dec() {
+    if (counter <= threshold_lower) return true;
+    counter--;
+    return false;
+  }
   bool test() { return counter > threshold_lower; }
   void reset() { counter = 8; }
   int get() { return counter; }

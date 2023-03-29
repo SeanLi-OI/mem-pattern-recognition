@@ -361,7 +361,7 @@ bool TraceList::check_locality_pattern(
     if (it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
             .get() > 0)
       it_meta->second.pattern_confidence[to_underlying(PATTERN::LOCALITY)]
-          .Negative();
+          .Dec();
     else if (it_meta->second.maybe_pattern[to_underlying(PATTERN::LOCALITY)] ==
              true)
       it_meta->second.is_not_pattern[to_underlying(PATTERN::LOCALITY)] = true;
@@ -384,8 +384,7 @@ bool TraceList::check_random_pattern(
   } else {
     if (it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
             .get() > 0)
-      it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)]
-          .Negative();
+      it_meta->second.pattern_confidence[to_underlying(PATTERN::RANDOM)].Dec();
     else if (it_meta->second.maybe_pattern[to_underlying(PATTERN::RANDOM)] ==
              true)
       it_meta->second.is_not_pattern[to_underlying(PATTERN::RANDOM)] = true;
@@ -589,6 +588,8 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
           }
         }
         if (meta.pattern == PATTERN::OTHER) {
+          if (meta.maybe_pattern[to_underlying(PATTERN::LOCALITY)])
+            meta.pattern = PATTERN::LOCALITY;
           if (meta.pattern_confidence[PATTERN::RANDOM].get() > RANDOM_THERSHOLD)
             meta.pattern = PATTERN::RANDOM;
           if (meta.count < PATTERN_THERSHOLD) meta.pattern = PATTERN::FRESH;
