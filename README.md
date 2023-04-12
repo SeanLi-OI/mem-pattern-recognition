@@ -2,28 +2,47 @@
 ``` bash
 mem-pattern-recognition
 ├──include/
-│   ├── conf_counter.h // 置信计数器
-│   ├── instruction.h // trace格式定义
-│   ├── pattern.h // 访存模式定义
-│   ├── pattern_list.h // 验证器
-│   ├── pc_meta.h // 分析器中每个PC的元数据
-│   ├── trace_list.h // 分析器
-│   ├── tracereader.h // trace读取
+│   ├── conf_counter.h // 置信计数器的定义
+│   ├── instruction.h // trace格式的定义
+│   ├── pattern.h // 各个访存模式的基本信息
+│   ├── pattern_list.h // 访存模式验证器的头文件
+│   ├── pc_meta.h // 分析器中每个PC的元数据定义
+│   ├── trace_list.h // 访存模式识别器的头文件
+│   ├── tracereader.h // trace读取器的头文件
 │   └── utils
-│       ├── macro.h // 通用的宏定义
-│       └── MCMF.h // 最小费用流算法
-└── src
-    ├── main.cpp
-    ├── pattern_list.cpp
-    ├── pc_meta.cpp
-    ├── trace_list.cpp
-    ├── tracereader.cpp
-    └── utils
-        ├── choose_ckp.cpp // 选择检查点算法
-        ├── macro.cpp 
-        ├── merge-result.cpp // 合并多个分析结果
-        ├── parse-merged-result.cpp // 解析合并后结果
-        └── pattern2line.cpp // PC元数据的统一输入输出接口
+│       ├── LRUqueue.h // LRU队列
+│       ├── macro.h // 一些通用的宏定义
+│       ├── MCMF.h // 最小费用流算法
+│       └── monoQueue.h // 单调队列
+├── src
+│   ├── main.cpp // 访存模式分析工具主程序
+│   ├── pattern_list.cpp // 访存模式验证器的实现
+│   ├── pc_meta.cpp // 分析器中每个PC的元数据的输入输出实现
+│   ├── trace_list.cpp // 访存模式识别器的实现
+│   ├── tracereader.cpp // trace读取器的实现
+│   └── utils
+│       ├── choose_ckp.cpp // 访存踪迹抓取加速算法
+│       ├── macro.cpp // 一些通用的函数实现
+│       ├── merge-result.cpp // 合并多个检查点的识别结果
+│       ├── parse-merged-result.cpp // 解析合并后结果
+│       └── pattern2line.cpp // PC元数据的统一输入输出接口
+└── test-cases // 访存模式生成器
+│   ├── random // 区域随机型访存模式生成器
+│   │   └── random.c
+│   ├── indirect // 间接型访存模式生成器
+│   │   └── indirect.c
+│   ├── pointera // 指针追逐型访存模式生成器
+│   │   └── pointera.c
+│   ├── pointerb // 指针数组型访存模式生成器
+│   │   └── pointerb.c
+│   └── stride // 跨步型访存模式生成器
+│       └── stride.c
+└── tracer // 访存踪迹抓取器
+    ├── gem5 // 基于Gem5实现的访存踪迹抓取器
+    │   └── ...
+    ├── qemu // 基于QEMU+Cannoli实现的访存踪迹抓取器
+    │   └── ...
+    └── union_tracer_with_roi.cpp // 基于Pintool接口实现的访存踪迹抓取器
 ```
 
 
