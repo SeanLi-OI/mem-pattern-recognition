@@ -67,24 +67,27 @@ bool TraceList::check_stride_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
   if (it_meta->second.lastaddr_2 == 0) return false;
-  long long int offset = abs_sub(it_meta->second.lastaddr_2, addr);
+  long long int offset = abs_sub(addr, it_meta->second.lastaddr_2);
+  // std::cerr<<offset<<std::endl;
   if (it_meta->second.offset_stride != 0) {
     if (offset == it_meta->second.offset_stride) {
       if (it_meta->second.stride_tmp.Positive())
         it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] = true;
-      it_meta->second.stride_flag = false;
+      it_meta->second.stride_flag =0;
       return true;
     } else {
       if (it_meta->second.maybe_pattern[to_underlying(PATTERN::STRIDE)] ==
           true) {
         if (it_meta->second.stride_tmp.test()) {
-          if (it_meta->second.stride_flag) {
+          if (it_meta->second.stride_flag>32) {
             it_meta->second.stride_tmp.Negative();
           } else
-            it_meta->second.stride_flag = true;
-        } else
+            it_meta->second.stride_flag ++;
+        } else{
           it_meta->second.is_not_pattern[to_underlying(PATTERN::STRIDE)] = true;
+        }
       }
+      it_meta->second.offset_stride = offset;
     }
   } else {
     it_meta->second.offset_stride = offset;
@@ -506,8 +509,8 @@ void TraceList::add_trace(unsigned long long int pc,
         }
         if (check_locality_pattern(it_meta, addr)) {
         }
-        if (check_random_pattern(it_meta, addr)) {
-        }
+        // if (check_random_pattern(it_meta, addr)) {
+        // }
       }
     }
 #ifdef ENABLE_TIMER
