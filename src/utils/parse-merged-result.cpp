@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
     fout2 << app;
     std::string str;
     std::vector<double> stats;
+    unsigned long long len;
     while (std::getline(fin2, str)) {
       if (str[0] == '=') {
         if (!flag)
@@ -119,6 +120,11 @@ int main(int argc, char *argv[]) {
         if (str[0] >= 'a' && str[0] <= 'z') {
           stats.push_back(get_percent(str, false));
           // fout2 << "," << get_percent(str, false);
+        }else{
+          if (str.substr(0, 12) == "Total Access"){
+            std::stringstream tmp(str.substr(13));
+            tmp >> len;
+          }
         }
       }
     }
@@ -146,7 +152,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
     for (auto &v : stats) fout2 << "," << v << "%";
-    fout2 << std::endl;
+    fout2 << "," << len << std::endl;
   }
   std::cout << std::fixed << std::setprecision(2) << MY_ALIGN_W("Average", 35)
             << MY_ALIGN_W(RAW_PERCENT(sum_c / 100.0, num), 6)

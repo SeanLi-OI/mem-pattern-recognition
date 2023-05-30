@@ -5,6 +5,7 @@ from sklearn.cluster import AgglomerativeClustering, KMeans
 app_list = "/data/lixiang/mem-pattern-recognition/new_bench/app_list.txt"
 file_path = sys.argv[1]
 benchs = {}
+benchs_len={}
 n2a = {}
 n2b = {}
 apps = []
@@ -16,6 +17,7 @@ with open(app_list) as f:
         name = line.strip().split(',')[2]
         if bench not in benchs:
             benchs[bench] = {}
+            benchs_len[bench] = {}
         benchs[bench][app] = []
         if name in n2a:
             n2a[name].append(app)
@@ -27,21 +29,23 @@ with open(app_list) as f:
 with open(file_path) as f:
     for line in f:
         app = line.strip().split(',')[0]
-        percent = line.strip().split(',')[1:]
+        percent = line.strip().split(',')[1:-1]
         percent = [float(i.strip()[:-1]) for i in percent]
+        lenn = int(line.strip().split(',')[-1])
         v1 = 100.0-sum(percent)
         if v1 > 95.0:
             continue
         if v1 < 0.0:
             v1 = 0.0
-        p1 = (random.uniform(0.0, 0.05))
-        p2 = (random.uniform(0.05, 0.95))
-        p3 = 1.0-p1-p2
+        p1 = (random.uniform(0.05, 0.95))
+        p2 = 1.0-p1
         percent[-2] = v1*p2
-        percent[-1] = v1*p3
-        percent.append(v1*p1)
+        percent[-1] = v1*p1
+        if app not in n2a:
+            continue
         for i in range(len(n2a[app])):
             benchs[n2b[app][i]][n2a[app][i]] = percent
+            benchs_len[n2b[app][i]][n2a[app][i]] = lenn
         apps.append(app)
         percents.append(percent)
 
@@ -61,6 +65,7 @@ def printBenchs():
         sum=[0.0 for i in range(len(list(benchs[bench].values())[0]))]
         n=0.0
         for app in benchs[bench].keys():
+            print(app+','+str(benchs_len[bench][app])+","+','.join([str(round(i, 1)) for i in benchs[bench][app]]))
             sum=[sum[i]+benchs[bench][app][i] for i in range(len(benchs[bench][app]))]
             n=n+1.0
             # print(bench, ',', app, ',', ','.join(
@@ -102,7 +107,8 @@ def calcVar():
                 dist += (app[i]-avgp[i])**2
             dists += dist
         dists = dists*1.0/len(apps)
-        print(bname+','+str(dists))
+        print(bname+',',','.join([str(round(i, 1)) for i in avgp]))
+        # print(bname+','+str(dists))
     avgp_c = [val*1.0/len(app_c) for val in avgp_c]
     dists = 0
     for app in app_c:
@@ -134,7 +140,8 @@ def sortDist():
     sum=0.0
     for dis in diss:
         sum=sum+dis[2]
-        print(dis)
+        if dis[2]>=95.0:
+            print(dis)
     print(sum/(N*(N-1)/2.0))
 
 
@@ -175,10 +182,10 @@ def sortDist2():
         print(dis)
 
 
-printBenchs()
+# printBenchs()
 # sortDist()
 # clusterK(7)
-# calcVar()
+calcVar()
 # sortDist2()
 
 # N = len(apps)

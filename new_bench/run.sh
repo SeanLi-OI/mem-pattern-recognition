@@ -1,7 +1,7 @@
 #!/bin/bash
-trace_dir=/data/songyifei/trace/riscv-recovery/
+trace_dir=/data/trace/riscv-recovery/
 mpr_dir=/data/lixiang/mem-pattern-recognition/
-result_dir=${mpr_dir}/new_bench/result-221009/
+result_dir=${mpr_dir}/new_bench/result-230423/
 
 lock_file=/home/lixiang/.my_lock_file
 max_concurrent=20
@@ -9,7 +9,13 @@ max_concurrent=20
 apps=()
 
 get_apps_manually() {
-    apps+=("bh")
+    # apps+=("bh")
+    # apps+=("seq-csr")
+    # apps+=("seq-list")
+    # apps+=("fft")
+    # apps+=("bfs")
+    apps+=("sssp")
+    # apps+=("radiosity")
     # apps+=("blender_r_base.prefetch-m64")
     # apps+=("bwaves_r_base.prefetch-m64")
     # apps+=("cactusBSSN_r_base.prefetch-m64")
@@ -117,7 +123,6 @@ do_merge() {
     if [ $2 -eq 0 ]; then
         ${mpr_dir}/build/merge-result \
             --analyze_result \
-            --validate_result \
             -input_dir=${result_dir}/$1 \
             -trace_dir=${trace_dir}/$1 \
             -pattern=${result_dir}/$1/mpr.pattern \
@@ -126,11 +131,10 @@ do_merge() {
             >${result_dir}/$1/mpr.stdout \
             2>${result_dir}/$1/mpr.stderr
 
-        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
+        echo ${mpr_dir}/build/merge-result --analyze_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
     else
         ${mpr_dir}/build/merge-result \
             --analyze_result \
-            --validate_result \
             -input_dir=${result_dir}/$1 \
             -trace_dir=${trace_dir}/$1 \
             -len=$len \
@@ -140,7 +144,7 @@ do_merge() {
             >${result_dir}/$1/mpr.stdout \
             2>${result_dir}/$1/mpr.stderr
 
-        echo ${mpr_dir}/build/merge-result --analyze_result --validate_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
+        echo ${mpr_dir}/build/merge-result --analyze_result -input_dir=${result_dir}/$1 -trace_dir=${trace_dir}/$1 -len=$len -pattern=${result_dir}/$1/mpr.pattern -stat=${result_dir}/$1/mpr.stat -result=${result_dir}/$1/mpr.res " exit with code" $?
     fi
     release_lock ${lock_id}
 }
@@ -182,12 +186,13 @@ job_v1() {
 
 job_v2() {
     for app in "${apps[@]}"; do
-        if [ ! -d ${trace_dir}/${app}/all ]; then
-            do_merge $app 1
+        if [ ! -d ${trace_dir}/${app}/1 ]; then
+            do_merge $app 0 &
         else
-            do_merge $app 0
+            do_merge $app 1 &
         fi
     done
+    wait
 }
 
 job_v3() {
@@ -249,12 +254,12 @@ if [ ! -z "$1" ]; then
     result_dir=${mpr_dir}/new_bench/$1/
 fi
 
-# get_apps_manually
+get_apps_manually
 # get_apps_from_dir
-get_all_apps_from_dir
+# get_all_apps_from_dir
 
 mkdir -p ${result_dir}
 # job_v1 >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
 # job_v2 >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
-# job_all >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
-job_v3
+job_all >${mpr_dir}/new_bench/run.log 2>${mpr_dir}/new_bench/run.err
+# job_v3
