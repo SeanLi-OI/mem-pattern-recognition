@@ -45,6 +45,34 @@ mem-pattern-recognition
     └── union_tracer_with_roi.cpp // 基于Pintool接口实现的访存踪迹抓取器
 ```
 
+# Compile from Source
+
+**IMPORTANT: Please make sure your g++ supports c++17 standard.**
+
+``` bash
+${mpr_dir}=WHERE_TO_PUT_MPR
+MAKEFLAGS="-j $(grep -c ^processor /proc/cpuinfo)"
+
+git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git ${mpr_dir}
+cd ${mpr_dir}
+git submodule update --recursive
+
+# build glog
+cd ${mpr_dir}/external/glog/
+mkdir build && cd build
+cmake3 ../ -DBUILD_SHARED_LIBS=OFF
+make ${MAKEFLAGS}
+
+# build gflags
+cd ${mpr_dir}/external/gflags/
+mkdir build && cd build
+cmake3 ../
+make ${MAKEFLAGS}
+
+cd ${mpr_dir}
+mkdir build && cd build
+make ${MAKEFLAGS}
+```
 
 
 # Demo
@@ -52,19 +80,16 @@ mem-pattern-recognition
 以五种访存模式生成器为基础
 跑通：（1）生成trace（2）分析pattern（3）模拟miss（4）输出模式识别统计信息（5）统计覆盖率与准确率；这一整个pipeline
 ```bash
-git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git
-git submodule update --recursive
-# build Champsim
-cd external/ChampSim
+# build Champsim (optional)
+cd ${mpr_dir}/external/ChampSim
 ./config.sh champsim_config.json
 make
-# build glog
-cd ../glog/
-mkdir build && cd build
-cmake3 ../
+
 # build union_tracer
 cd ../../tracer
 ./make_union_tracer.sh
+
+# run mpr
 cd ../
 ./scripts/run_apps.sh
 ```
