@@ -395,6 +395,46 @@ bool TraceList::check_random_pattern(
   }
 }
 
+bool TraceList::check_heap_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  if (it_meta->second.lastaddr == 0 || it_meta->second.lastaddr_2 == 0 ||
+      it_meta->second.is_not_pattern[to_underlying(PATTERN::HEAP)] == true)
+    return false;
+  if (addr <= it_meta->second.lastaddr ||
+      it_meta->second.lastaddr <= it_meta->second.lastaddr_2)
+    return false;
+  unsigned long long ratio =
+      (addr - it_meta->second.lastaddr_2) /
+      (it_meta->second.lastaddr - it_meta->second.lastaddr_2);
+  auto finalize = [&]() {
+    it_meta->second.base_addr_for_heap = it_meta->second.lastaddr_2;
+    it_meta->second.common_ratio_for_heap = ratio;
+    it_meta->second.idx_for_heap = 3;
+  };
+  if (it_meta->second.idx_for_heap == 0 ||
+      it_meta->second.lastaddr == it_meta->second.base_addr_for_heap) {
+    finalize();
+  } else {
+    unsigned long long base_ratio =
+        (addr - it_meta->second.base_addr_for_heap) /
+        (it_meta->second.lastaddr - it_meta->second.base_addr_for_heap);
+    if (base_ratio == it_meta->second.common_ratio_for_heap) {
+      it_meta->second.idx_for_heap++;
+      if (it_meta->second.idx_for_heap > HEAP_THRESHOLD) {
+        it_meta->second.maybe_pattern[to_underlying(PATTERN::HEAP)] = true;
+      }
+    } else {
+      finalize();
+      it_meta->second.heap_flag++;
+      if (it_meta->second.heap_flag > NOT_HEAP_THRESHOLD) {
+        it_meta->second.is_not_pattern[to_underlying(PATTERN::HEAP)] = true;
+      }
+    }
+  }
+  return true;
+}
+
 #define HOT_REGION_INST_THRESHOLD 32
 #define HOT_REGION_LEN_THRESHOLD \
   (hot_region_size / HOT_REGION_INST_THRESHOLD / 4)
@@ -509,6 +549,8 @@ void TraceList::add_trace(unsigned long long int pc,
         }
         if (check_locality_pattern(it_meta, addr)) {
         }
+        if (check_heap_pattern(it_meta, addr)) {
+        }
         // if (check_random_pattern(it_meta, addr)) {
         // }
       }
@@ -551,6 +593,11 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
   std::vector<unsigned long long int> accessCount(PATTERN_NUM, 0),
       pcCount(PATTERN_NUM, 0);
   for (auto &[pc, meta] : pc2meta) {
+    if (meta.maybe_pattern[to_underlying(PATTERN::HEAP)] &&
+        !meta.is_not_pattern[to_underlying(PATTERN::HEAP)]) {
+      meta.pattern = PATTERN::HEAP;
+      continue;
+    }
     if (meta.pattern == PATTERN::OTHER) {
       int champ_confidence = 16;
       for (int i = 0; i < PATTERN_NUM - 1; i++) {

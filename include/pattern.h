@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-const int PATTERN_NUM = 10;
+const int PATTERN_NUM = 11;
 const std::string PATTERN_NAME[] = {"fresh",
                                     "struct_pointer",
                                     "static",
@@ -17,6 +17,7 @@ const std::string PATTERN_NAME[] = {"fresh",
                                     "indirect",
                                     "locality",
                                     "random",
+                                    "heap",
                                     "other"};  // Make sure PATTERN_NAME has
                                                // same order with PATTERN
 enum PATTERN : uint16_t {
@@ -30,6 +31,7 @@ enum PATTERN : uint16_t {
   INDIRECT,
   LOCALITY,
   RANDOM,
+  HEAP,
   OTHER  // Make sure other is the last one
 };
 
@@ -44,6 +46,7 @@ static std::unordered_map<std::string, PATTERN> const pattern_table = {
     {"indirect", PATTERN::INDIRECT},
     {"locality", PATTERN::LOCALITY},
     {"random", PATTERN::RANDOM},
+    {"heap", PATTERN::HEAP},
     {"other", PATTERN::OTHER}};
 
 template <typename E>
@@ -65,5 +68,7 @@ const uint16_t LOCALITY_T = 16 * 1024;
 const uint16_t RANDOM_THERSHOLD = 512;
 const uint16_t RANDOM_LEN = 64;
 const uint32_t RANDOM_T = 256;
+const uint32_t HEAP_THRESHOLD = 8;
+const uint32_t NOT_HEAP_THRESHOLD = 32;
 
 #endif

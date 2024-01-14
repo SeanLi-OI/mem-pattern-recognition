@@ -58,9 +58,13 @@ class PCmeta {  // Metadata for each PC
   unsigned long long int lastvalue;
   ConfCounter pointerA_tmp;
 
-  // STATIC & STRIDE
+  // STATIC & STRIDE & HEAP
   unsigned long long int lastaddr, lastaddr_2;
   ConfCounter static_tmp;
+
+  // HEAP
+  unsigned long long int base_addr_for_heap, common_ratio_for_heap, idx_for_heap;
+  short heap_flag;
 
   // STRIDE
   long long int offset_stride;
@@ -94,6 +98,9 @@ class PCmeta {  // Metadata for each PC
     maybe_pointer_chase = 0;
     pattern = PATTERN::OTHER;
     stride_flag = false;
+    base_addr_for_heap = 0;
+    common_ratio_for_heap = 0;
+    idx_for_heap = 0;
     for (int i = 0; i < PATTERN_NUM; i++) {
       maybe_pattern[i] = false;
       is_not_pattern[i] = false;

@@ -96,6 +96,11 @@ void PatternList::add_trace(unsigned long long int pc,
       next_addr[pc] = (long long)value + it_meta->second.lastaddr -
                       (long long)it_meta->second.lastvalue;
       break;
+    case PATTERN::HEAP:
+      next_addr[pc] = it_meta->second.common_ratio_for_heap *
+                          (addr - it_meta->second.base_addr_for_heap) +
+                      it_meta->second.base_addr_for_heap;
+      break;
     default:
       break;
   }
@@ -125,8 +130,12 @@ void PatternList::add_trace(unsigned long long int pc,
             it_meta->second.stride_flag++;
             hit_count[pattern_now]++;
           }
-        }else{
+        } else if (it_meta->second.pattern == PATTERN::HEAP) {
+          if (addr >= it->second &&
+              addr <= it->second + it_meta->second.common_ratio_for_heap)
             hit_count[pattern_now]++;
+        } else {
+          hit_count[pattern_now]++;
         }
       }
 #ifdef ENABLE_MISS_COUNT
