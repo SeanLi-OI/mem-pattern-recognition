@@ -7,3 +7,6 @@
 [submodule "external/glog"]
 	path = external/glog
 	url = https://github.com/google/glog.git
+[submodule "external/mimalloc"]
+	path = external/mimalloc
+	url = https://github.com/microsoft/mimalloc.git

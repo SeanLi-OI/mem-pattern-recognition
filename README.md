@@ -51,27 +51,12 @@ mem-pattern-recognition
 
 ``` bash
 ${mpr_dir}=WHERE_TO_PUT_MPR
-MAKEFLAGS="-j $(grep -c ^processor /proc/cpuinfo)"
 
 git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git ${mpr_dir}
 cd ${mpr_dir}
 git submodule update --recursive
 
-# build glog
-cd ${mpr_dir}/external/glog/
-mkdir build && cd build
-cmake3 ../ -DBUILD_SHARED_LIBS=OFF
-make ${MAKEFLAGS}
-
-# build gflags
-cd ${mpr_dir}/external/gflags/
-mkdir build && cd build
-cmake3 ../
-make ${MAKEFLAGS}
-
-cd ${mpr_dir}
-mkdir build && cd build
-make ${MAKEFLAGS}
+./build.sh
 ```
 
 

@@ -11,8 +11,8 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 set(gflags_DIR ${PROJECT_SOURCE_DIR}/external/gflags/build)
 set(glog_DIR ${PROJECT_SOURCE_DIR}/external/glog/build)
-find_package(gflags 2.2.2 REQUIRED)
-find_package(glog 0.6.0 REQUIRED)
+find_package(gflags REQUIRED)
+find_package(glog REQUIRED)
 find_package(OpenMP REQUIRED)
 
 add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-error=maybe-uninitialized -Wno-error=unused-parameter -Wno-error=switch -w -g -O3 -std=c++17 -march=native -pthread -lpthread -lglog)
@@ -24,7 +24,7 @@ add_executable(mpr
     ${PROJECT_SOURCE_DIR}/src/pc_meta.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/macro.cpp
     ${PROJECT_SOURCE_DIR}/src/main.cpp
-    /usr/local/lib64/mimalloc-1.7/mimalloc.o
+    ${PROJECT_SOURCE_DIR}/external/mimalloc/out/mimalloc.o
 )
 target_link_options(mpr PRIVATE -static-libgcc -static-libstdc++ -lpthread)
 target_link_libraries(mpr glog::glog)
