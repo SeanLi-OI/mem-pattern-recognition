@@ -54,6 +54,7 @@ ${mpr_dir}=WHERE_TO_PUT_MPR
 
 git clone https://github.com/SeanLi-OI/mem-pattern-recognition.git ${mpr_dir}
 cd ${mpr_dir}
+git submdule init
 git submodule update --recursive
 
 ./build.sh
