@@ -79,9 +79,11 @@ int main(int argc, char *argv[]) {
       case PATTERN::POINTER_B:
         pf_pc = pc2meta[pc].lastpc;
         break;
+#ifdef OLD_INDIRECT_PATTERN
       case PATTERN::INDIRECT:
         pf_pc = pc2meta[pc].pc_value.value;
         break;
+#endif
       default:
         pf_pc = pc;
     };

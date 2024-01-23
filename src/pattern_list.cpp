@@ -69,6 +69,7 @@ void PatternList::add_trace(unsigned long long int pc,
     case PATTERN::POINTER_B:
       next_addr[pc] = (*pc2meta)[it_meta->second.lastpc].lastvalue;
       break;
+#ifdef OLD_INDIRECT_PATTERN
     case PATTERN::INDIRECT:
       it_indirect = indirect_base_addr.find(pc);
       if (it_indirect == indirect_base_addr.end()) {
@@ -84,6 +85,7 @@ void PatternList::add_trace(unsigned long long int pc,
           addr - (*pc2meta)[it_meta->second.pc_value.value].lastvalue *
                      it_meta->second.pc_value.offset;
       break;
+#endif
     case PATTERN::STRUCT_POINTER:
       for (auto &c : it_meta->second.struct_pointer_candidate) {
         auto it2 = pc2id.find(c.first);
@@ -116,6 +118,10 @@ void PatternList::add_trace(unsigned long long int pc,
                                          ? PATTERN::POINTER_A
                                          : it_meta->second.pattern);
     all_count[pattern_now]++;
+#ifndef OLD_INDIRECT_PATTERN
+    // TODO: implement validation of new indirect pattern
+    if (it_meta->second.pattern == PATTERN::INDIRECT) hit_count[pattern_now]++;
+#endif
     auto it = next_addr.find(pc);
     if (it != next_addr.end()) {
       total_count[pattern_now]++;

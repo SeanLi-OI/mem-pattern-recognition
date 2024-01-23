@@ -30,10 +30,16 @@ void PCmeta::input(std::ifstream &in) {
     case PATTERN::pointer:
       in >> std::hex >> lastpc >> maybe_pointer_chase;
       break;
+#ifdef OLD_INDIRECT_PATTERN
     case PATTERN::INDIRECT:
       in >> std::hex >> pc_value.value >> std::hex >> pc_value.addr >>
           std::dec >> pc_value.offset;
       break;
+#else
+    case PATTERN::INDIRECT:
+      in >> std::dec >> pc_value.offset >> std::hex >> pc_value.prev_pc;
+      break;
+#endif
     case PATTERN::STRUCT_POINTER:
       in >> std::dec >> n;
       while (n--) {
@@ -63,10 +69,17 @@ void PCmeta::output(std::ofstream &out) {
       out << " " << std::hex << lastpc << " " << maybe_pointer_chase
           << std::endl;
       break;
+#ifdef OLD_INDIRECT_PATTERN
     case PATTERN::INDIRECT:
       out << " " << std::hex << pc_value.value << " " << std::hex
           << pc_value.addr << " " << std::dec << pc_value.offset << std::endl;
       break;
+#else
+    case PATTERN::INDIRECT:
+      out << " " << std::dec << pc_value.offset << " " << std::hex
+          << pc_value.prev_pc << std::endl;
+      break;
+#endif
     case PATTERN::STRUCT_POINTER:
       out << " " << std::dec << struct_pointer_candidate.size();
       for (auto &c : struct_pointer_candidate) {

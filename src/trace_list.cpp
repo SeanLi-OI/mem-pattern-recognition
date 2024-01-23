@@ -176,6 +176,7 @@ bool TraceList::check_pointerB_pattern(
   return false;
 }
 
+#ifdef OLD_INDIRECT_PATTERN
 bool TraceList::check_indirect_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
     unsigned long long int &addr) {
@@ -255,6 +256,88 @@ bool TraceList::check_indirect_pattern(
   }
   return !tmp.empty();
 }
+#else
+bool TraceList::check_indirect_pattern(
+    std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
+    unsigned long long int &addr) {
+  if (it_meta->second.lastaddr == 0 || addr == it_meta->second.lastaddr) return false;
+  if (it_meta->second.is_pattern(PATTERN::STRIDE)) return false;
+  if (it_meta->second.is_not_pattern[to_underlying(PATTERN::INDIRECT)])
+    return false;
+  std::unordered_map<unsigned long long int, PCmeta::pc_value_meta> tmp;
+  for (auto it_trace = traceHistory.rbegin(); it_trace != traceHistory.rend();
+       it_trace++) {
+    auto &trace = *it_trace;
+    auto prev_trace_it = it_trace;
+    prev_trace_it++;
+    while (prev_trace_it != traceHistory.rend() &&
+           prev_trace_it->pc != it_meta->first && prev_trace_it->isWrite)
+      prev_trace_it++;
+    if (trace.pc == it_meta->first || prev_trace_it == traceHistory.rend() ||
+        prev_trace_it->pc == it_meta->first) {
+      break;  // find loop
+    }
+    auto it = it_meta->second.pc_value_candidate.find(trace.pc);
+    auto it_meta2 = pc2meta.find(trace.pc);
+    long long addr_offset =
+        (long long)addr - (long long)it_meta->second.lastaddr;
+    long long value_offset = (long long)it_meta2->second.lastvalue -
+                             (long long)it_meta2->second.lastvalue_2;
+    if (it != it_meta->second.pc_value_candidate.end()) {
+      if (value_offset == 0 || addr_offset % value_offset != 0) {
+        if (!it->second.confidence.Negative()) {
+          tmp[trace.pc] = it->second;
+        }
+        continue;
+      }
+      long long offset_now = addr_offset / value_offset;
+      if (offset_now != 2 && offset_now != 4 && offset_now != 8 &&
+          offset_now != 16) {
+        if (!it->second.confidence.Negative()) {
+          tmp[trace.pc] = it->second;
+        }
+        continue;
+      }
+      if (it->second.offset == offset_now) {
+        it->second.confidence.Positive();
+        tmp[trace.pc] = it->second;
+      } else {
+        if (it->second.confidence.Negative()) {
+          it->second.offset = offset_now;
+          it->second.confidence.reset();
+        }
+        tmp[trace.pc] = it->second;
+      }
+      if (it->second.confidence.test()) {
+        it_meta->second.pc_value =
+            PCmeta::pc_value_meta(trace.pc, offset_now, prev_trace_it->pc);
+        // it_meta->second.pc_value_candidate.clear();
+        it_meta->second.maybe_pattern[to_underlying(PATTERN::INDIRECT)] = true;
+        tmp[trace.pc] = it->second;
+        // return true;
+      }
+    } else {
+      if (value_offset == 0 || addr_offset % value_offset != 0) {
+        continue;
+      }
+      long long offset_now = addr_offset / value_offset;
+      if (offset_now != 2 && offset_now != 4 && offset_now != 8 &&
+          offset_now != 16)
+        continue;
+      tmp[trace.pc] =
+          PCmeta::pc_value_meta(trace.pc, offset_now, prev_trace_it->pc);
+    }
+  }
+  it_meta->second.pc_value_candidate = tmp;
+  if (tmp.empty()) {
+    if (it_meta->second.maybe_pattern[to_underlying(PATTERN::INDIRECT)] ==
+        true) {
+      it_meta->second.is_not_pattern[to_underlying(PATTERN::INDIRECT)] = true;
+    }
+  }
+  return !tmp.empty();
+}
+#endif
 
 bool TraceList::check_struct_pointer_pattern(
     std::unordered_map<unsigned long long int, PCmeta>::iterator &it_meta,
@@ -566,6 +649,7 @@ void TraceList::add_trace(unsigned long long int pc,
     it_meta->second.lastaddr_2 = it_meta->second.lastaddr;
     it_meta->second.lastaddr = addr;
     // it_meta->second.inst_id_list.push_back(inst_id);
+    it_meta->second.lastvalue_2 = it_meta->second.lastvalue;
     it_meta->second.lastvalue = value;
   }
   {  // Add Next
@@ -598,12 +682,26 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
       meta.pattern = PATTERN::HEAP;
       continue;
     }
+#ifndef OLD_INDIRECT_PATTERN
+    if (meta.maybe_pattern[to_underlying(PATTERN::INDIRECT)] &&
+        !meta.is_not_pattern[to_underlying(PATTERN::INDIRECT)]) {
+      if (pc2meta[meta.pc_value.prev_pc]
+              .maybe_pattern[to_underlying(PATTERN::STRIDE)])
+        meta.pattern = PATTERN::INDIRECT;
+      else
+        meta.pattern = PATTERN::STRIDE;
+      continue;
+    }
+#endif
     if (meta.pattern == PATTERN::OTHER) {
       int champ_confidence = 16;
       for (int i = 0; i < PATTERN_NUM - 1; i++) {
         if (static_cast<PATTERN>(i) == PATTERN::FRESH ||
             static_cast<PATTERN>(i) == PATTERN::POINTER_B ||
             static_cast<PATTERN>(i) == PATTERN::LOCALITY ||
+#ifndef OLD_INDIRECT_PATTERN
+            static_cast<PATTERN>(i) == PATTERN::INDIRECT ||
+#endif
             static_cast<PATTERN>(i) == PATTERN::RANDOM)
           continue;
         if (static_cast<PATTERN>(i) == PATTERN::pointer) {
@@ -630,6 +728,9 @@ void TraceList::printStats(unsigned long long totalCnt, const char filename[],
               static_cast<PATTERN>(i) == PATTERN::pointer ||
               static_cast<PATTERN>(i) == PATTERN::POINTER_A ||
               static_cast<PATTERN>(i) == PATTERN::LOCALITY ||
+#ifndef OLD_INDIRECT_PATTERN
+              static_cast<PATTERN>(i) == PATTERN::INDIRECT ||
+#endif
               static_cast<PATTERN>(i) == PATTERN::RANDOM)
             continue;
           if (meta.pattern_confidence[i].get() > champ_confidence) {

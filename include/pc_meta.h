@@ -15,6 +15,7 @@
 class PCmeta {  // Metadata for each PC
  public:
   // INDIRECT
+#ifdef OLD_INDIRECT_PATTERN
   struct pc_value_meta {
     unsigned long long int value;
     unsigned long long int addr;
@@ -29,6 +30,23 @@ class PCmeta {  // Metadata for each PC
   std::unordered_map<unsigned long long int, pc_value_meta> pc_value_candidate;
   std::set<unsigned long long int> meeted_pc;
   pc_value_meta pc_value;  // value(PC), addr(base_addr), offset(offset)
+#else
+  struct pc_value_meta {
+    unsigned long long int pc, prev_pc;
+    long long offset;
+    ConfCounter confidence;
+    pc_value_meta() {}
+    pc_value_meta(unsigned long long int _p, long long _o,
+                  unsigned long long int _pp)
+        : pc(_p), offset(_o), prev_pc(_pp) {
+      confidence.reset();
+    }
+  };
+  std::unordered_map<unsigned long long int, pc_value_meta> pc_value_candidate;
+  std::set<unsigned long long int> meeted_pc;
+  unsigned long long int lastvalue_2;
+  pc_value_meta pc_value;
+#endif
 
   // STRUCT_POINTER
   struct struct_pointer_meta {
